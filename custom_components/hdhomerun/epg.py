@@ -8,6 +8,7 @@ import logging
 import random
 import secrets
 from datetime import datetime, timezone
+from io import BytesIO
 from xml.etree.ElementTree import Element
 
 import aiohttp
@@ -22,7 +23,7 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 _SOURCE = "https://api.hdhomerun.com/api/xmltv"
-_MAX_XML = 20 * 1024 * 1024  # Limit the *decompressed* body, including gzip responses.
+_MAX_XML = 48 * 1024 * 1024  # Limit the *decompressed* body, including gzip responses.
 _HEADERS = {
     "Cache-Control": "no-store",
     "Referrer-Policy": "no-referrer",
@@ -34,39 +35,57 @@ def inspect_xmltv(xml: bytes) -> dict:
     """Reject malformed, oversized or non-guide responses; summarize coverage."""
     if len(xml) > _MAX_XML or b"<!DOCTYPE" in xml.upper() or b"<!ENTITY" in xml.upper():
         raise ValueError("XMLTV exceeds limit or contains a DTD")
-    root: Element = ElementTree.fromstring(xml)
-    if root.tag != "tv":
-        raise ValueError("XMLTV root is not tv")
-    channels = root.findall("channel")
-    programmes = root.findall("programme")
-    ids = {channel.get("id") for channel in channels if channel.get("id")}
-    if not ids or not programmes or len(ids) != len(channels):
-        raise ValueError("XMLTV needs uniquely identified channels and programmes")
-    dates = []
-    for programme in programmes:
-        if programme.get("channel") not in ids:
-            raise ValueError("Programme refers to an unknown channel")
-        try:
-            start = datetime.strptime(programme.attrib["start"], "%Y%m%d%H%M%S %z")
-            stop = datetime.strptime(programme.attrib["stop"], "%Y%m%d%H%M%S %z")
-        except (KeyError, ValueError) as exc:
-            raise ValueError("Invalid programme time") from exc
-        if stop <= start:
-            raise ValueError("Invalid programme duration")
-        dates.append((start, stop))
+    root: Element | None = None
+    depth = 0
+    ids: set[str] = set()
+    used_ids: set[str] = set()
+    names: set[str] = set()
+    programmes = 0
+    first_start: datetime | None = None
+    last_stop: datetime | None = None
+    for event, element in ElementTree.iterparse(BytesIO(xml), events=("start", "end")):
+        if event == "start":
+            depth += 1
+            if root is None:
+                if element.tag != "tv":
+                    raise ValueError("XMLTV root is not tv")
+                root = element
+            continue
+        if depth == 2:
+            if element.tag == "channel":
+                channel_id = element.get("id")
+                if not channel_id or channel_id in ids:
+                    raise ValueError("XMLTV needs uniquely identified channels")
+                ids.add(channel_id)
+                names.update(
+                    name.text.strip()
+                    for name in element.findall("display-name")
+                    if name.text and name.text.strip()
+                )
+            elif element.tag == "programme":
+                used_ids.add(element.get("channel", ""))
+                try:
+                    start = datetime.strptime(
+                        element.attrib["start"], "%Y%m%d%H%M%S %z"
+                    )
+                    stop = datetime.strptime(element.attrib["stop"], "%Y%m%d%H%M%S %z")
+                except (KeyError, ValueError) as exc:
+                    raise ValueError("Invalid programme time") from exc
+                if stop <= start:
+                    raise ValueError("Invalid programme duration")
+                first_start = min(first_start, start) if first_start else start
+                last_stop = max(last_stop, stop) if last_stop else stop
+                programmes += 1
+            root.clear()
+        depth -= 1
+    if not ids or not programmes or not used_ids <= ids:
+        raise ValueError("XMLTV needs channels and programmes with valid references")
     return {
-        "channels": len(channels),
-        "programmes": len(programmes),
-        "coverage_start": min(start for start, _ in dates).isoformat(),
-        "coverage_end": max(stop for _, stop in dates).isoformat(),
-        "channel_names": sorted(
-            {
-                name.text.strip()
-                for channel in channels
-                for name in channel.findall("display-name")
-                if name.text and name.text.strip()
-            }
-        ),
+        "channels": len(ids),
+        "programmes": programmes,
+        "coverage_start": first_start.isoformat(),
+        "coverage_end": last_stop.isoformat(),
+        "channel_names": sorted(names),
     }
 
 
