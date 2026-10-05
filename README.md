@@ -59,10 +59,17 @@ SiliconDust determines the available guide window (typically two days, or
 longer with eligible DVR service); this proxy cannot add missing guide data.
 
 The guide is validated as XMLTV (`tv`, uniquely identified channels and
-programmes with valid references/times) and capped at 20 MiB decompressed.
-An invalid, oversized or failed download never replaces the last good cache.
-If your entitled guide exceeds that cap, this release needs a larger bounded
-streaming design rather than silently accepting an unbounded response.
+programmes with valid references/times) and capped at 48 MiB decompressed.
+The HTTP download is chunked and stops at the cap; validation parses
+incrementally rather than retaining a full XML tree. The complete validated
+guide is still kept in memory and in HA's private, atomic storage so UHF can
+retrieve it while offline; allow additional memory and disk headroom for
+serialization and an in-progress refresh. An invalid, oversized or failed
+download never replaces the last good cache. The 3.31 MiB two-day guide tested
+with this fork suggests roughly 23 MiB at 14 days for a similar lineup, but
+real guide size depends on channels and programme detail. A larger entitled
+feed may still exceed 48 MiB; check `last_error_type` and the HA logs before
+considering a higher limit or a disk-backed streaming cache.
 
 ## Entities Provided
 

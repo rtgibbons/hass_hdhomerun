@@ -1,6 +1,7 @@
 """Tests for the optional XMLTV cache, validation and capability endpoint."""
 
 import json
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -31,6 +32,43 @@ def test_xmltv_validation():
     ):
         with pytest.raises(ValueError):
             epg.inspect_xmltv(invalid)
+
+
+def test_incremental_validation_handles_order_and_size_boundary(monkeypatch):
+    """Channel references may precede definitions; the cap is inclusive."""
+    channel = b'<channel id="7"><display-name>7.1</display-name></channel>'
+    programme = GUIDE.split(b"</channel>", 1)[1].removesuffix(b"</tv>")
+    reordered = b"<tv>" + programme + channel + b"</tv>"
+    assert epg.inspect_xmltv(reordered)["programmes"] == 1
+    monkeypatch.setattr(epg, "_MAX_XML", len(reordered))
+    assert epg.inspect_xmltv(reordered)["channels"] == 1
+    monkeypatch.setattr(epg, "_MAX_XML", len(reordered) - 1)
+    with pytest.raises(ValueError):
+        epg.inspect_xmltv(reordered)
+
+
+def test_14_day_feed_larger_than_old_limit():
+    """A plausible 14-day guide must pass the new bounded parser."""
+    first = datetime(2026, 10, 5, tzinfo=timezone.utc)
+    description = b"x" * 1_600_000
+    programmes = []
+    for day in range(14):
+        start = first + timedelta(days=day)
+        stop = start + timedelta(days=1)
+        programmes.append(
+            b'<programme channel="7" start="'
+            + start.strftime("%Y%m%d%H%M%S +0000").encode()
+            + b'" stop="'
+            + stop.strftime("%Y%m%d%H%M%S +0000").encode()
+            + b'"><desc>'
+            + description
+            + b"</desc></programme>"
+        )
+    guide = b'<tv><channel id="7"/>' + b"".join(programmes) + b"</tv>"
+    assert 20 * 1024 * 1024 < len(guide) < epg._MAX_XML
+    summary = epg.inspect_xmltv(guide)
+    assert summary["programmes"] == 14
+    assert summary["coverage_end"] == "2026-10-19T00:00:00+00:00"
 
 
 class Store:
