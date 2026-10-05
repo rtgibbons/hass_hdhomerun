@@ -9,8 +9,11 @@ Home Assistant integration for the Silicondust HDHomeRun network tuners.
 
 ## Installation
 
-This fork installs from its `develop` default branch, without a GitHub release
-ZIP. In HACS, open **Custom repositories** from the top-right menu, enter
+First, the fork owner must set `develop` as the GitHub default branch under
+**Settings → General → Default branch**. While the default remains `main`, HACS
+will still request an unavailable release ZIP. Once `develop` is the default,
+this fork installs directly from source without a GitHub release ZIP. In HACS,
+open **Custom repositories** from the top-right menu, enter
 `https://github.com/rtgibbons/hass_hdhomerun`, select **Integration**, and add
 it. Open **HDHomeRun**, select **Download** and choose `develop` (the default
 branch), then restart Home Assistant and add the HDHomeRun integration under
