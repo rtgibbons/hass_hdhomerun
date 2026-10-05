@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
+
+echo "[orb setup] Installing Python 3.13"
+time uv python install 3.13
+
+echo "[orb setup] Preparing repository virtual environment"
+if [[ ! -x .venv/bin/python ]] || ! .venv/bin/python -c 'import sys; assert sys.version_info[:2] == (3, 13)' 2>/dev/null; then
+  time uv venv --python 3.13 --clear .venv
+fi
+
+# This repo has no dependency lockfile. Pin the tested development toolchain,
+# and include integration requirements from the manifest as they evolve.
+mapfile -t integration_requirements < <(.venv/bin/python -c 'import json; requirements = json.load(open("custom_components/hdhomerun/manifest.json"))["requirements"]; print(*requirements, sep="\n", end="\n" if requirements else "")')
+echo "[orb setup] Installing Home Assistant and test tools"
+time uv pip install --python .venv/bin/python \
+  'homeassistant==2026.2.3' \
+  'pytest==9.1.1' \
+  'pytest-asyncio==1.4.0' \
+  'ruff==0.16.10' \
+  'defusedxml==0.7.1' \
+  "${integration_requirements[@]}"
+
+# Amp and supervised commands run in new login shells. Scope activation to
+# this checkout; do not change Python for unrelated projects in the orb.
+marker="# hass_hdhomerun orb environment: $repo_root"
+if ! grep -Fqx "$marker" "$HOME/.bash_profile" 2>/dev/null; then
+  cat >> "$HOME/.bash_profile" <<EOF
+
+$marker
+if [[ "\$PWD" == "$repo_root" || "\$PWD" == "$repo_root/"* ]]; then
+  source "$repo_root/.venv/bin/activate"
+fi
+EOF
+fi
+
+echo "[orb setup] Ready: $repo_root/.venv"
