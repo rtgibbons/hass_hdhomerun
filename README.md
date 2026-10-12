@@ -136,6 +136,7 @@ device was discovered and what its capabilities are.
 | Location | Name | Enabled by default | Additional Information |
 |---|---|:---:|---|
 | Device | Channel Scanning | ✔️ | Percentage progress of the channel scan |
+| Device | All Tuners Busy | ✔️ | On when every tuner is tuned or scanning; useful to warn before a recording or stream would fail |
 
 ### Button
 
@@ -160,6 +161,7 @@ device was discovered and what its capabilities are.
 | Device | Favourite Channels | ✔️ | Number of channels marked as favorites in the channel list | List of channel names | |
 | Device | Lineup Updated | ✔️ | When the channel lineup was last fetched successfully | | HTTP-discovered devices only |
 | Device | Tuner Count | ✔️ | Number of tuners the device has | | |
+| Device | Tuners Available | ✔️ | Number of tuners that are idle | | A tuner counts as busy when it reports anything beyond its name (tuned, streaming or scanning) |
 | Tuner | Tuner X | ✔️ | Status of the tuner; `Idle`, `In use`, `Scanning` or the channel being watched | Frequency, signal strength, signal quality, symbol quality, network rate and target IP (as applicable) | X is the tuner number. |
 | Tuner | Frequency | ✔️ | | | |
 | Tuner | Network Rate | ✔️ | | | |

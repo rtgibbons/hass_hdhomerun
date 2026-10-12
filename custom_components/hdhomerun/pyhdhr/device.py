@@ -603,4 +603,13 @@ class HDHomeRunDevice:
         """Get the status for all tuners."""
         return self._tuner_status
 
+    @property
+    def tuners_in_use(self) -> list[str]:
+        """Get the tuners reporting anything beyond their name (tuned or scanning)."""
+        return [
+            str(tuner.get("Resource"))
+            for tuner in self._tuner_status or []
+            if any(key != "Resource" for key in tuner)
+        ]
+
     # endregion

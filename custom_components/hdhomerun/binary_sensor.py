@@ -29,6 +29,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from . import HDHomerunEntity, entity_cleanup
 from .const import (
     CONF_DATA_COORDINATOR_GENERAL,
+    CONF_DATA_COORDINATOR_TUNER_STATUS,
     DOMAIN,
     SIGNAL_HDHOMERUN_CHANNEL_SCAN_FINISHED,
     SIGNAL_HDHOMERUN_CHANNEL_SCANNING_STARTED,
@@ -91,6 +92,25 @@ async def async_setup_entry(
                 state_processor=lambda s: s is not None,
             )
         )
+
+    all_tuners_busy = HDHomerunBinarySensor(
+        additional_description=AdditionalBinarySensorDescription(
+            state_value=lambda d: (
+                bool(d.tuner_status) and len(d.tuners_in_use) == len(d.tuner_status)
+            ),
+        ),
+        config_entry=config_entry,
+        coordinator=hass.data[DOMAIN][config_entry.entry_id][
+            CONF_DATA_COORDINATOR_TUNER_STATUS
+        ],
+        description=BinarySensorEntityDescription(
+            key="",
+            name="All Tuners Busy",
+            translation_key="all_tuners_busy",
+        ),
+    )
+    all_tuners_busy._attr_entity_category = None  # useful for automations
+    sensors.append(all_tuners_busy)
 
     # region #-- add version sensors if need be --#
     if UPDATE_DOMAIN is None:

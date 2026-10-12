@@ -437,8 +437,25 @@ async def async_setup_entry(
     # endregion
 
     # region #-- add default sensors --#
+    tuners_available = HDHomerunSensor(
+        additional_description=AdditionalSensorDescription(
+            state_value=lambda d: (
+                len(d.tuner_status) - len(d.tuners_in_use) if d.tuner_status else None
+            ),
+        ),
+        config_entry=config_entry,
+        coordinator=coordinator_tuner,
+        description=SensorEntityDescription(
+            key="",
+            name="Tuners Available",
+            state_class=SensorStateClass.MEASUREMENT,
+            translation_key="tuners_available",
+        ),
+    )
+    tuners_available._attr_entity_category = None  # useful for automations
     sensors.extend(
         [
+            tuners_available,
             HDHomerunSensor(
                 config_entry=config_entry,
                 coordinator=coordinator_general,

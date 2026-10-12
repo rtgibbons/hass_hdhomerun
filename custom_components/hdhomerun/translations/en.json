@@ -32,6 +32,9 @@
     },
     "entity": {
         "binary_sensor": {
+            "all_tuners_busy": {
+                "name": "All Tuners Busy"
+            },
             "channel_scanning": {
                 "name": "Channel Scanning"
             }
@@ -70,6 +73,9 @@
             },
             "tuner_count": {
                 "name": "Tuner Count"
+            },
+            "tuners_available": {
+                "name": "Tuners Available"
             },
             "tuner_frequency": {
                 "name": "Frequency"

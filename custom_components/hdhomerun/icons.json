@@ -1,5 +1,13 @@
 {
     "entity": {
+        "binary_sensor": {
+            "all_tuners_busy": {
+                "default": "mdi:television-classic",
+                "state": {
+                    "on": "mdi:television-classic-off"
+                }
+            }
+        },
         "button": {
             "channel_scan": {
                 "default": "mdi:text-search"
@@ -23,6 +31,9 @@
             },
             "tuner_count": {
                 "default": "mdi:transmission-tower-import"
+            },
+            "tuners_available": {
+                "default": "mdi:television-play"
             },
             "tuner_status": {
                 "default": "mdi:television-classic",
