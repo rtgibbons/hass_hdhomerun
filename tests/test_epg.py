@@ -1,11 +1,13 @@
 """Tests for the optional XMLTV cache, validation and capability endpoint."""
 
+import gzip
 import json
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
 from aiohttp import web
+from aiohttp.test_utils import TestClient, TestServer
 from homeassistant.components.http import KEY_HASS
 
 from custom_components.hdhomerun import epg
@@ -141,13 +143,22 @@ async def test_refresh_failure_retains_snapshot_and_rotation_revokes(monkeypatch
     session.xml = b"Forbidden"
     await proxy.refresh()
     assert proxy.xml == GUIDE.decode() and proxy.error == "ParseError"
+    assert gzip.decompress(proxy.xml_gzip) == GUIDE
     assert proxy.store.data["xml"] == GUIDE.decode()
+    session.xml = GUIDE.replace(b"News", b"Weather")
+    proxy.store.fail = True
+    assert not await proxy.refresh()
+    assert proxy.xml == GUIDE.decode()
+    assert gzip.decompress(proxy.xml_gzip) == GUIDE
+    proxy.store.fail = False
 
     tokens = {old_token: proxy}
     await proxy.rotate(tokens)
     assert old_token not in tokens and tokens[proxy.token] is proxy
     request = SimpleNamespace(
-        app={KEY_HASS: SimpleNamespace(data={"hdhomerun": {"_epg_tokens": tokens}})}
+        app={KEY_HASS: SimpleNamespace(data={"hdhomerun": {"_epg_tokens": tokens}})},
+        path=f"/api/hdhomerun/xmltv/{proxy.token}",
+        headers={},
     )
     with pytest.raises(web.HTTPNotFound):
         await epg.XMLTVView().get(request, old_token)
@@ -181,3 +192,60 @@ async def test_oversize_and_restart_keep_good_cache(monkeypatch):
     assert restored.token == proxy.token
     assert restored.xml == GUIDE.decode()
     assert restored.fetched_at == proxy.fetched_at
+    assert gzip.decompress(restored.xml_gzip) == GUIDE
+
+
+@pytest.mark.asyncio
+async def test_short_tokens_and_compressed_http_formats(monkeypatch):
+    """Serve identical guides with negotiated gzip or explicit gzip-file URLs."""
+    stored = Store({"token": "a" * 64, "xml": GUIDE.decode()})
+    monkeypatch.setattr(epg, "Store", lambda *args, **kwargs: stored)
+    proxy = epg.EPGProxy(Hass(), "entry", "192.0.2.1", 6)
+    await proxy.load()
+    assert len(proxy.token) == 22
+    assert stored.data["token"] == proxy.token
+    restored = epg.EPGProxy(Hass(), "entry", "192.0.2.1", 6)
+    await restored.load()
+    assert restored.token == proxy.token
+    tokens = {proxy.token: proxy}
+    app = web.Application()
+    app[KEY_HASS] = SimpleNamespace(data={"hdhomerun": {"_epg_tokens": tokens}})
+    view = epg.XMLTVView()
+
+    async def serve(request):
+        return await view.get(request, request.match_info["token"])
+
+    for route in [view.url, *view.extra_urls]:
+        app.router.add_get(route, serve)
+    async with TestClient(TestServer(app), auto_decompress=False) as client:
+        path = f"/api/hdhomerun/xmltv/{proxy.token}"
+        for encoding, compressed in (
+            ("identity", False),
+            ("gzip", True),
+            ("br, gzip;q=0.5", True),
+            ("gzip;q=0.5, identity;q=1", False),
+            ("*;q=1, gzip;q=0", False),
+            ("*;q=0.5", True),
+            ("gzip;q=invalid", False),
+        ):
+            response = await client.get(path, headers={"Accept-Encoding": encoding})
+            assert response.status == 200
+            body = await response.read()
+            assert (gzip.decompress(body) if compressed else body) == GUIDE
+            assert response.headers.get("Content-Encoding") == ("gzip" if compressed else None)
+            assert response.headers["Vary"] == "Accept-Encoding"
+        for encoding in ("gzip;q=0, identity;q=0", "*;q=0"):
+            response = await client.get(path, headers={"Accept-Encoding": encoding})
+            assert response.status == 406
+        response = await client.get(path + ".xml.gz")
+        assert response.status == 200
+        assert response.content_type == "application/gzip"
+        assert "Content-Encoding" not in response.headers
+        assert gzip.decompress(await response.read()) == GUIDE
+        assert (await client.get("/api/hdhomerun/xmltv/" + "a" * 64)).status == 404
+        await proxy.rotate(tokens)
+        assert len(proxy.token) == 22
+        assert (await client.get(path)).status == 404
+        assert (await client.get(path + ".xml.gz")).status == 404
+        proxy.xml = None
+        assert (await client.get(f"/api/hdhomerun/xmltv/{proxy.token}.xml.gz")).status == 503
