@@ -86,6 +86,7 @@ class EPGStatus(SensorEntity):
         path = f"/api/hdhomerun/xmltv/{proxy.token}"
         attrs = {
             "url": f"{base.rstrip('/')}{path}",
+            "gzip_url": f"{base.rstrip('/')}{path}.xml.gz",
             "fetched_at": proxy.fetched_at,
             "cache_age_hours": round((datetime.now(timezone.utc) - datetime.fromisoformat(proxy.fetched_at)).total_seconds() / 3600, 2) if proxy.fetched_at else None,
             "last_error_type": proxy.error,

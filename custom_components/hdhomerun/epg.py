@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import gzip
 import json
 import logging
 import random
 import secrets
 from datetime import datetime, timezone
+from functools import partial
 from io import BytesIO
 from xml.etree.ElementTree import Element
 
@@ -109,6 +111,7 @@ class EPGProxy:
         )
         self.token = ""
         self.xml: str | None = None
+        self.xml_gzip: bytes | None = None
         self.fetched_at: str | None = None
         self.summary: dict = {}
         self.error: str | None = None
@@ -125,9 +128,9 @@ class EPGProxy:
         self.token = (
             token
             if isinstance(token, str)
-            and len(token) == 64
-            and all(c in "0123456789abcdef" for c in token)
-            else secrets.token_hex(32)
+            and len(token) == 22
+            and all(c in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-" for c in token)
+            else secrets.token_urlsafe(16)
         )
         xml = stored.get("xml")
         if isinstance(xml, str):
@@ -138,6 +141,9 @@ class EPGProxy:
             except (ValueError, ElementTree.ParseError):
                 _LOGGER.warning("Discarding invalid stored XMLTV cache")
             else:
+                self.xml_gzip = await self.hass.async_add_executor_job(
+                    partial(gzip.compress, xml.encode(), compresslevel=6, mtime=0)
+                )
                 self.xml = xml
                 fetched_at = stored.get("fetched_at")
                 if isinstance(fetched_at, str):
@@ -211,6 +217,9 @@ class EPGProxy:
                     inspect_xmltv, bytes(body)
                 )
                 xml = body.decode("utf-8")
+                compressed = await self.hass.async_add_executor_job(
+                    partial(gzip.compress, bytes(body), compresslevel=6, mtime=0)
+                )
                 fetched_at = datetime.now(timezone.utc).isoformat()
                 await self._save(xml=xml, fetched_at=fetched_at)
             except (
@@ -233,8 +242,9 @@ class EPGProxy:
                 )
                 self.notify()
                 return False
-            self.xml, self.fetched_at, self.summary, self.error = (
+            self.xml, self.xml_gzip, self.fetched_at, self.summary, self.error = (
                 xml,
+                compressed,
                 fetched_at,
                 summary,
                 None,
@@ -245,7 +255,7 @@ class EPGProxy:
     async def rotate(self, tokens: dict[str, EPGProxy]) -> None:
         """Commit a new capability before revoking the old one."""
         async with self._lock:
-            token = secrets.token_hex(32)
+            token = secrets.token_urlsafe(16)
             await self._save(token=token)
             tokens.pop(self.token, None)
             self.token = token
@@ -276,7 +286,8 @@ class EPGProxy:
 class XMLTVView(HomeAssistantView):
     """Read-only capability endpoint; no Home Assistant bearer token required."""
 
-    url = "/api/hdhomerun/xmltv/{token}"
+    url = "/api/hdhomerun/xmltv/{token:[A-Za-z0-9_-]{22}}"
+    extra_urls = ["/api/hdhomerun/xmltv/{token:[A-Za-z0-9_-]{22}}.xml.gz"]
     name = "api:hdhomerun:xmltv"
     requires_auth = False
 
@@ -287,6 +298,35 @@ class XMLTVView(HomeAssistantView):
             raise web.HTTPNotFound()
         if proxy.xml is None:
             raise web.HTTPServiceUnavailable(headers=_HEADERS)
+        if request.path.endswith(".xml.gz"):
+            return web.Response(
+                body=proxy.xml_gzip, content_type="application/gzip", headers=_HEADERS
+            )
+        headers = {**_HEADERS, "Vary": "Accept-Encoding"}
+        encodings = {}
+        for item in request.headers.get("Accept-Encoding", "").lower().split(","):
+            encoding, *parameters = item.strip().split(";")
+            quality = 1.0
+            for parameter in parameters:
+                if parameter.strip().startswith("q="):
+                    try:
+                        quality = float(parameter.strip()[2:])
+                    except ValueError:
+                        quality = 0.0
+            encodings[encoding] = quality if 0 <= quality <= 1 else 0.0
+        gzip_quality = encodings.get("gzip", encodings.get("*", 0))
+        identity_quality = encodings.get(
+            "identity", 0 if encodings.get("*") == 0 else 1
+        )
+        if gzip_quality > 0 and (
+            "identity" not in encodings or gzip_quality >= identity_quality
+        ):
+            headers["Content-Encoding"] = "gzip"
+            return web.Response(
+                body=proxy.xml_gzip, content_type="application/xml", headers=headers
+            )
+        if identity_quality == 0:
+            raise web.HTTPNotAcceptable(headers=headers)
         return web.Response(
-            text=proxy.xml, content_type="application/xml", headers=_HEADERS
+            text=proxy.xml, content_type="application/xml", headers=headers
         )
