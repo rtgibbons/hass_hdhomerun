@@ -246,6 +246,20 @@ async def async_setup_entry(
     if hdhomerun_device is not None:
         for tuner in hdhomerun_device.tuner_status:
             device_name: str = tuner.get("Resource").title()
+            if proxy is not None:
+                sensors.append(
+                    HDHomerunTunerProgrammeSensor(
+                        proxy=proxy,
+                        config_entry=config_entry,
+                        coordinator=coordinator_tuner,
+                        device_name=device_name,
+                        description=SensorEntityDescription(
+                            key="",
+                            name=f"{device_name} Programme",
+                            translation_key="tuner_programme",
+                        ),
+                    )
+                )
             sensors.extend(
                 [
                     HDHomerunTunerSensor(
@@ -567,6 +581,48 @@ class HDHomerunTunerSensor(HDHomerunTunerEntity, SensorEntity):
             return self._tuner.get(self.entity_description.key, None)
 
         return None
+
+
+class HDHomerunTunerProgrammeSensor(HDHomerunTunerSensor):
+    """The cached guide programme airing on a tuner's current channel."""
+
+    def __init__(self, proxy: EPGProxy, **kwargs) -> None:
+        """Initialise."""
+        self._proxy = proxy
+        super().__init__(**kwargs)
+        self._attr_entity_category = None
+
+    def _lookup(self) -> tuple[str | None, Any, Any]:
+        """Match the tuned channel to the guide; return its current/next programmes."""
+        number, name = self._tuner.get("VctNumber"), self._tuner.get("VctName")
+        if not number and not name:
+            return None, None, None
+        if (channel_id := self._proxy.index.match(number, name)) is None:
+            return None, None, None
+        return channel_id, *self._proxy.index.programmes(
+            channel_id, datetime.now(timezone.utc)
+        )
+
+    @property
+    def native_value(self) -> str | None:
+        """Return the title of the programme airing now."""
+        _, current, _ = self._lookup()
+        return current.title[:255] if current and current.title else None
+
+    @property
+    def extra_state_attributes(self) -> Mapping[str, Any]:
+        """Return programme details; keys are always present."""
+        channel_id, current, upcoming = self._lookup()
+        return {
+            "channel_id": channel_id,
+            "subtitle": current.subtitle if current else None,
+            "episode": current.episode if current else None,
+            "description": current.description if current else None,
+            "start": current.start.isoformat() if current else None,
+            "stop": current.stop.isoformat() if current else None,
+            "next_title": upcoming.title if upcoming else None,
+            "next_start": upcoming.start.isoformat() if upcoming else None,
+        }
 
 
 # endregion

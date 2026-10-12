@@ -18,6 +18,9 @@
             "fav_channels": {
                 "default": "mdi:playlist-star"
             },
+            "tuner_programme": {
+                "default": "mdi:television-guide"
+            },
             "tuner_count": {
                 "default": "mdi:transmission-tower-import"
             },

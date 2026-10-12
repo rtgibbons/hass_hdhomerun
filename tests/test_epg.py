@@ -9,6 +9,7 @@ import pytest
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
 from homeassistant.components.http import KEY_HASS
+from defusedxml import ElementTree
 from yarl import URL
 
 from custom_components.hdhomerun import epg
@@ -141,9 +142,11 @@ async def test_refresh_failure_retains_snapshot_and_rotation_revokes(monkeypatch
     assert "fresh-secret" not in repr(proxy.store.data)
     assert proxy.xml == GUIDE.decode()
     session.xml = b"Forbidden"
+    indexed = proxy.index
     await proxy.refresh()
     assert proxy.xml == GUIDE.decode() and proxy.error == "ParseError"
     assert gzip.decompress(proxy.xml_gzip) == GUIDE
+    assert proxy.index is not indexed  # reindexed from the cache
     assert proxy.store.data["xml"] == GUIDE.decode()
     session.xml = GUIDE.replace(b"News", b"Weather")
     proxy.store.fail = True
@@ -337,3 +340,42 @@ async def test_status_sensor_urls_and_lineup_matches(monkeypatch):
     assert attrs["m3u_url"] == f"{base}/m3u/{proxy.token}"
     assert (attrs["lineup_channels"], attrs["lineup_name_matches"]) == (2, 1)
     assert attrs["unmatched_lineup_examples"] == ["8.1 "]
+
+
+def test_schedule_window_and_now_playing_lookup():
+    """Index only the upcoming window; find the current and next programme."""
+    guide = (
+        b'<tv><channel id="7"><lcn>7.1</lcn></channel>'
+        b'<programme channel="7" start="20261004060000 +0000" stop="20261004080000 +0000">'
+        b"<title>Old</title></programme>"
+        b'<programme channel="7" start="20261004090000 +0000" stop="20261004100000 +0000">'
+        b"<title>Later</title></programme>"
+        b'<programme channel="7" start="20261004080000 +0000" stop="20261004090000 +0000">'
+        b'<title>News</title><sub-title>Morning</sub-title><desc>'
+        + b"d" * 600
+        + b'</desc><episode-num system="xmltv_ns">1.4.0/1</episode-num></programme>'
+        b'<programme channel="7" start="20261007080000 +0000" stop="20261007090000 +0000">'
+        b"<title>Too far</title></programme></tv>"
+    )
+    now = datetime(2026, 10, 4, 8, 30, tzinfo=timezone.utc)
+    summary, index = epg.parse_xmltv(guide, now)
+    assert summary["programmes"] == 4
+    assert [p.title for p in index.schedule["7"]] == ["News", "Later"]
+    current, upcoming = index.programmes("7", now)
+    assert (current.title, current.subtitle, current.episode) == ("News", "Morning", "S02E05")
+    assert len(current.description) == 500
+    assert upcoming.title == "Later"
+    gap, upcoming = index.programmes("7", datetime(2026, 10, 4, 10, tzinfo=timezone.utc))
+    assert gap is None and upcoming is None
+    assert index.programmes("missing", now) == (None, None)
+
+
+def test_episode_numbers():
+    """Prefer onscreen numbering and tolerate partial xmltv_ns values."""
+    def episode(numbers):
+        return epg._episode(ElementTree.fromstring(f"<programme>{numbers}</programme>"))
+
+    assert episode('<episode-num system="onscreen">S3 E7</episode-num>'
+                   '<episode-num system="xmltv_ns">0.0.</episode-num>') == "S3 E7"
+    assert episode('<episode-num system="xmltv_ns">.11/20.</episode-num>') == "E12"
+    assert episode('<episode-num system="dd_progid">EP1</episode-num>') is None

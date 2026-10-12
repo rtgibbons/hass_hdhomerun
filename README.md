@@ -87,6 +87,15 @@ button reports an error if the tuner did not return one. The playlist
 returns 503 until a lineup is available; UDP-discovered devices
 do not expose one. XMLTV channel IDs themselves are not rewritten.
 
+With the proxy enabled, each tuner also gets a **Programme** sensor. Its state
+is the title of the programme airing on the tuned channel, from the cached
+guide, and its attributes are `channel_id`, `subtitle`, `episode`,
+`description` (first 500 characters), `start`, `stop`, `next_title` and
+`next_start`. It is unknown when the tuner is idle or the channel has no
+matching guide entry. No extra requests are made: the next 48 hours of
+programmes are indexed in memory at each refresh attempt, including failed
+ones, so the sensor keeps working from the cache while offline.
+
 **Treat the URLs as passwords:** anyone who obtains them can read the guide and
 the lineup. Tokens contain 128 random bits encoded as 22 URL-safe characters.
 On updating from the former 64-character format, the next integration load
@@ -157,6 +166,7 @@ device was discovered and what its capabilities are.
 | Tuner | Signal Quality | ✔️ | | | |
 | Tuner | Symbol Strength | ✔️ | | | |
 | Tuner | Target IP | ✔️ | | |  |
+| Tuner | Programme | ✔️ | Title of the programme airing on the tuned channel | Channel ID, subtitle, episode, description, start, stop, next title and next start | Only with the XMLTV EPG proxy enabled |
 
 ### Update
 

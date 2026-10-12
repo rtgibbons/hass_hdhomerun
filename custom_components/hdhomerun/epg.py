@@ -8,10 +8,12 @@ import json
 import logging
 import random
 import secrets
+from bisect import bisect_right
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import partial
 from io import BytesIO
+from typing import NamedTuple
 from xml.etree.ElementTree import Element
 
 import aiohttp
@@ -27,6 +29,10 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 _SOURCE = "https://api.hdhomerun.com/api/xmltv"
 _MAX_XML = 48 * 1024 * 1024  # Limit the *decompressed* body, including gzip responses.
+# Programmes kept in memory for now-playing lookups; rebuilt on each refresh
+# attempt, which always runs well within this window.
+_SCHEDULE_WINDOW = timedelta(hours=48)
+_MAX_DESCRIPTION = 500
 _HEADERS = {
     "Cache-Control": "no-store",
     "Referrer-Policy": "no-referrer",
@@ -39,13 +45,57 @@ def _key(value: object) -> str:
     return " ".join(str(value).split()).casefold()
 
 
+class Programme(NamedTuple):
+    """A guide entry kept for now-playing lookups."""
+
+    start: datetime
+    stop: datetime
+    title: str | None
+    subtitle: str | None
+    episode: str | None
+    description: str | None
+
+
+def _text(element: Element, tag: str) -> str | None:
+    """Return the stripped text of the first child with the given tag."""
+    child = element.find(tag)
+    return (child.text.strip() or None) if child is not None and child.text else None
+
+
+def _episode(element: Element) -> str | None:
+    """Prefer the on-screen episode number; otherwise convert xmltv_ns."""
+    numbers = {
+        number.get("system"): (number.text or "").strip()
+        for number in element.findall("episode-num")
+    }
+    if numbers.get("onscreen"):
+        return numbers["onscreen"]
+    parts = [part.split("/")[0].strip() for part in numbers.get("xmltv_ns", "").split(".")]
+    if len(parts) >= 2 and parts[1].isdigit():
+        episode = f"E{int(parts[1]) + 1:02d}"
+        return f"S{int(parts[0]) + 1:02d}{episode}" if parts[0].isdigit() else episode
+    return None
+
+
 class GuideIndex:
-    """Match HDHomeRun lineup channels to XMLTV channel IDs."""
+    """Match HDHomeRun lineup channels to XMLTV channel IDs and programmes."""
 
     def __init__(self) -> None:
         """Start with no guide channels."""
         self._keys: dict[str, set[str]] = {}
         self.icons: dict[str, str] = {}
+        self.schedule: dict[str, list[Programme]] = {}
+
+    def programmes(
+        self, channel_id: str, when: datetime
+    ) -> tuple[Programme | None, Programme | None]:
+        """Return the programme airing at a time and the one after it."""
+        schedule = self.schedule.get(channel_id, [])
+        position = bisect_right(schedule, when, key=lambda programme: programme.start)
+        current = schedule[position - 1] if position else None
+        if current is not None and current.stop <= when:
+            current = None
+        return current, schedule[position] if position < len(schedule) else None
 
     def add_channel(self, channel_id: str, keys: list[str], icon: str | None) -> None:
         """Index a channel by its virtual channel number and display names."""
@@ -65,8 +115,12 @@ class GuideIndex:
         return None
 
 
-def parse_xmltv(xml: bytes) -> tuple[dict, GuideIndex]:
-    """Reject malformed, oversized or non-guide responses; summarize and index."""
+def parse_xmltv(xml: bytes, now: datetime | None = None) -> tuple[dict, GuideIndex]:
+    """Reject malformed, oversized or non-guide responses; summarize and index.
+
+    Only programmes airing between now and the schedule window are indexed.
+    """
+    now = now or datetime.now(timezone.utc)
     if len(xml) > _MAX_XML or b"<!DOCTYPE" in xml.upper() or b"<!ENTITY" in xml.upper():
         raise ValueError("XMLTV exceeds limit or contains a DTD")
     root: Element | None = None
@@ -117,10 +171,24 @@ def parse_xmltv(xml: bytes) -> tuple[dict, GuideIndex]:
                 first_start = min(first_start, start) if first_start else start
                 last_stop = max(last_stop, stop) if last_stop else stop
                 programmes += 1
+                if stop > now and start < now + _SCHEDULE_WINDOW:
+                    description = _text(element, "desc")
+                    index.schedule.setdefault(element.get("channel", ""), []).append(
+                        Programme(
+                            start,
+                            stop,
+                            _text(element, "title"),
+                            _text(element, "sub-title"),
+                            _episode(element),
+                            description[:_MAX_DESCRIPTION] if description else None,
+                        )
+                    )
             root.clear()
         depth -= 1
     if not ids or not programmes or not used_ids <= ids:
         raise ValueError("XMLTV needs channels and programmes with valid references")
+    for schedule in index.schedule.values():
+        schedule.sort(key=lambda programme: programme.start)
     return {
         "channels": len(ids),
         "programmes": programmes,
@@ -324,6 +392,11 @@ class EPGProxy:
                 _LOGGER.warning(
                     "XMLTV refresh failed (%s); keeping last good cache", self.error
                 )
+                if self.xml is not None:
+                    # Move the now-playing window forward while offline.
+                    _, self.index = await self.hass.async_add_executor_job(
+                        parse_xmltv, self.xml.encode()
+                    )
                 self.notify()
                 return False
             (
