@@ -558,8 +558,10 @@ class HDHomerunTunerSensor(HDHomerunTunerEntity, SensorEntity):
 
     def _handle_coordinator_update(self) -> None:
         """Update the device information when the coordinator updates."""
-        super()._handle_coordinator_update()
+        # Refresh the tuner before the base class writes state, or every tuner
+        # sensor would report the previous poll.
         self._tuner = self._get_tuner()
+        super()._handle_coordinator_update()
 
     @property
     def entity_picture(self) -> str | None:
