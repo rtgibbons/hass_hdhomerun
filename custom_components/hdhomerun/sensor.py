@@ -501,6 +501,18 @@ class HDHomerunSensor(HDHomerunEntity, SensorEntity):
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
     @property
+    def extra_state_attributes(self) -> Mapping[str, Any] | None:
+        """Define additional information for the sensor."""
+        if (
+            self.coordinator.data
+            and self._additional_description is not None
+            and self._additional_description.extra_attributes
+        ):
+            return self._additional_description.extra_attributes(self.coordinator.data)
+
+        return None
+
+    @property
     def native_value(self) -> StateType | date | datetime:
         """Get the value of the sensor."""
         if self.coordinator.data:
