@@ -9,6 +9,7 @@ import pytest
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
 from homeassistant.components.http import KEY_HASS
+from yarl import URL
 
 from custom_components.hdhomerun import epg
 
@@ -24,7 +25,6 @@ def test_xmltv_validation():
     summary = epg.inspect_xmltv(GUIDE)
     assert (summary["channels"], summary["programmes"]) == (1, 1)
     assert summary["coverage_start"] == "2026-10-04T08:00:00-05:00"
-    assert summary["channel_names"] == ["7.1"]
     for invalid in (
         b"<html>Forbidden</html>",
         b"<tv><channel id='7'/></tv>",
@@ -249,3 +249,91 @@ async def test_short_tokens_and_compressed_http_formats(monkeypatch):
         assert (await client.get(path + ".xml.gz")).status == 404
         proxy.xml = None
         assert (await client.get(f"/api/hdhomerun/xmltv/{proxy.token}.xml.gz")).status == 503
+
+
+def test_guide_index_matches_lineup_numbers_then_names():
+    """Prefer the virtual channel number; fall back to an unambiguous name."""
+    guide = (
+        b'<tv><channel id="US1.hdhomerun.com"><display-name>KOMO</display-name>'
+        b"<lcn>4.1</lcn><icon src=\"http://logo/komo.png\"/></channel>"
+        b'<channel id="US2.hdhomerun.com"><display-name>KOMO</display-name>'
+        b"<lcn>4.2</lcn></channel>"
+        b'<channel id="US3.hdhomerun.com"><display-name>Bounce</display-name></channel>'
+        b'<programme channel="US1.hdhomerun.com" start="20261004080000 +0000" '
+        b'stop="20261004090000 +0000"><title>News</title></programme></tv>'
+    )
+    _, index = epg.parse_xmltv(guide)
+    assert index.match("4.1", "KOMO") == "US1.hdhomerun.com"
+    assert index.match("4.2", "Other") == "US2.hdhomerun.com"
+    assert index.match("9.9", "KOMO") is None  # ambiguous name
+    assert index.match("9.9", " bounce ") == "US3.hdhomerun.com"
+    assert index.match(None, None) is None
+
+    lineup = [
+        {"GuideNumber": "4.1", "GuideName": "KOMO", "URL": "http://tuner:5004/auto/v4.1"},
+        {"GuideNumber": "9.9", "GuideName": 'Odd "name"\n', "URL": "http://tuner:5004/auto/v9.9"},
+        {"GuideNumber": "5.1", "GuideName": "Locked", "DRM": 1, "URL": "http://x"},
+        {"GuideNumber": "6.1", "GuideName": "Hidden", "Enabled": 0, "URL": "http://x"},
+        {"GuideNumber": "7.1", "GuideName": "No URL"},
+    ]
+    playlist = epg.build_m3u(lineup, index, "http://ha/api/hdhomerun/xmltv/t")
+    assert playlist.splitlines() == [
+        '#EXTM3U url-tvg="http://ha/api/hdhomerun/xmltv/t" '
+        'x-tvg-url="http://ha/api/hdhomerun/xmltv/t"',
+        '#EXTINF:-1 channel-id="4.1" channel-number="4.1" tvg-chno="4.1" '
+        'tvg-name="KOMO" tvg-id="US1.hdhomerun.com" '
+        'tvg-logo="http://logo/komo.png",KOMO',
+        "http://tuner:5004/auto/v4.1",
+        '#EXTINF:-1 channel-id="9.9" channel-number="9.9" tvg-chno="9.9" '
+        "tvg-name=\"Odd 'name'\",Odd 'name'",
+        "http://tuner:5004/auto/v9.9",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_m3u_view_uses_capability_token(monkeypatch):
+    """Serve the playlist only for live tokens and only once a lineup exists."""
+    monkeypatch.setattr(epg, "Store", lambda *args, **kwargs: Store())
+    lineup = []
+    proxy = epg.EPGProxy(Hass(), "entry", "192.0.2.1", 6, lineup=lambda: lineup)
+    await proxy.load()
+    request = SimpleNamespace(
+        app={KEY_HASS: SimpleNamespace(data={"hdhomerun": {"_epg_tokens": {proxy.token: proxy}}})},
+        url=URL("http://ha:8123/api/hdhomerun/m3u/" + proxy.token + "?x=1"),
+    )
+    with pytest.raises(web.HTTPNotFound):
+        await epg.M3UView().get(request, "wrong")
+    with pytest.raises(web.HTTPServiceUnavailable):
+        await epg.M3UView().get(request, proxy.token)
+    lineup.append({"GuideNumber": "7.1", "GuideName": "Seven", "URL": "http://tuner/v7.1"})
+    result = await epg.M3UView().get(request, proxy.token)
+    assert result.content_type == "audio/x-mpegurl"
+    assert result.headers["Cache-Control"] == "no-store"
+    assert f'url-tvg="http://ha:8123/api/hdhomerun/xmltv/{proxy.token}"' in result.text
+    assert "http://tuner/v7.1" in result.text
+
+
+@pytest.mark.asyncio
+async def test_status_sensor_urls_and_lineup_matches(monkeypatch):
+    """The status sensor exposes every capability URL and lineup match counts."""
+    from custom_components.hdhomerun.const import CONF_DATA_COORDINATOR_GENERAL
+    from custom_components.hdhomerun.sensor import EPGStatus
+
+    monkeypatch.setattr(epg, "Store", lambda *args, **kwargs: Store())
+    proxy = epg.EPGProxy(Hass(), "entry", "192.0.2.1", 6)
+    await proxy.load()
+    proxy.summary, proxy.index = epg.parse_xmltv(GUIDE)
+    lineup = [{"GuideNumber": "7.1", "GuideName": "Seven"}, {"GuideNumber": "8.1"}]
+    sensor = EPGStatus(SimpleNamespace(entry_id="entry", unique_id="1234ABCD"), proxy)
+    sensor.hass = SimpleNamespace(
+        config=SimpleNamespace(external_url="https://ha.example/", internal_url=None),
+        data={"hdhomerun": {"entry": {CONF_DATA_COORDINATOR_GENERAL: SimpleNamespace(
+            data=SimpleNamespace(channels=lineup))}}},
+    )
+    attrs = sensor.extra_state_attributes
+    base = "https://ha.example/api/hdhomerun"
+    assert attrs["url"] == f"{base}/xmltv/{proxy.token}"
+    assert attrs["gzip_url"] == f"{base}/xmltv/{proxy.token}.xml.gz"
+    assert attrs["m3u_url"] == f"{base}/m3u/{proxy.token}"
+    assert (attrs["lineup_channels"], attrs["lineup_name_matches"]) == (2, 1)
+    assert attrs["unmatched_lineup_examples"] == ["8.1 "]

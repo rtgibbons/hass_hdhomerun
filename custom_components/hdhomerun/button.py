@@ -32,6 +32,7 @@ from .const import (
     SIGNAL_HDHOMERUN_CHANNEL_SCANNING_STARTED,
     SIGNAL_HDHOMERUN_CHANNEL_SOURCE_CHANGE,
 )
+from .pyhdhr.const import DiscoverMode
 from .pyhdhr.discover import HDHomeRunDevice
 from .epg import EPGProxy
 
@@ -98,6 +99,19 @@ async def async_setup_entry(
                     key="",
                     name="Channel Scan",
                     translation_key="channel_scan",
+                ),
+            )
+        )
+
+    if coordinator.data.discovery_method is DiscoverMode.HTTP:
+        buttons.append(
+            LineupButton(
+                config_entry=config_entry,
+                coordinator=coordinator,
+                description=ButtonEntityDescription(
+                    key="",
+                    name="Refresh Lineup",
+                    translation_key="refresh_lineup",
                 ),
             )
         )
@@ -186,6 +200,24 @@ class HDHomeRunButton(HDHomerunEntity, ButtonEntity, ABC):
             hass=self.hass,
             self=self,
         )
+
+
+class LineupButton(HDHomerunEntity, ButtonEntity):
+    """Re-read the lineup on demand; it is never polled (uvjim/hass_hdhomerun#119)."""
+
+    def __init__(self, **kwargs) -> None:
+        """Initialise."""
+        self.entity_domain = ENTITY_DOMAIN
+        super().__init__(**kwargs)
+
+    async def async_press(self) -> None:
+        """Fetch the lineup once and update the channel sensors and playlist."""
+        device: HDHomeRunDevice = self.coordinator.data
+        previous = device.lineup_fetched_at
+        await device.async_get_lineup_http()
+        self.coordinator.async_update_listeners()
+        if device.lineup_fetched_at == previous:
+            raise HomeAssistantError("Lineup refresh failed; the tuner returned an error")
 
 
 class EPGButton(ButtonEntity):

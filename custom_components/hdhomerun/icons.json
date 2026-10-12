@@ -3,6 +3,9 @@
         "button": {
             "channel_scan": {
                 "default": "mdi:text-search"
+            },
+            "refresh_lineup": {
+                "default": "mdi:playlist-check"
             }
         },
         "sensor": {

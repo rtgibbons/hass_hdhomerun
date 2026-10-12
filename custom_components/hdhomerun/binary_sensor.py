@@ -30,6 +30,7 @@ from . import HDHomerunEntity, entity_cleanup
 from .const import (
     CONF_DATA_COORDINATOR_GENERAL,
     DOMAIN,
+    SIGNAL_HDHOMERUN_CHANNEL_SCAN_FINISHED,
     SIGNAL_HDHOMERUN_CHANNEL_SCANNING_STARTED,
     UPDATE_DOMAIN,
 )
@@ -83,6 +84,9 @@ async def async_setup_entry(
                 ),
                 recurrence_interval=5,
                 recurrence_trigger=SIGNAL_HDHOMERUN_CHANNEL_SCANNING_STARTED,
+                recurrence_post_signal=(
+                    f"{SIGNAL_HDHOMERUN_CHANNEL_SCAN_FINISHED}_{config_entry.entry_id}"
+                ),
                 state_method="async_get_channel_scan_progress",
                 state_processor=lambda s: s is not None,
             )

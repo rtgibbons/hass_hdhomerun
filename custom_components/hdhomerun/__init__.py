@@ -15,6 +15,7 @@ from homeassistant.const import CONF_SCAN_INTERVAL, MAJOR_VERSION, MINOR_VERSION
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
@@ -37,9 +38,10 @@ from .const import (
     DEF_SCAN_INTERVAL_TUNER_STATUS_SECS,
     DOMAIN,
     PLATFORMS,
+    SIGNAL_HDHOMERUN_CHANNEL_SCAN_FINISHED,
 )
 from .logger import Logger
-from .epg import EPGProxy, XMLTVView
+from .epg import EPGProxy, M3UView, XMLTVView
 from .pyhdhr.const import DiscoverMode
 from .pyhdhr.discover import Discover, HDHomeRunDevice
 
@@ -56,6 +58,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Register one HTTP route for all loaded EPG-enabled entries."""
     hass.data.setdefault(DOMAIN, {})["_epg_tokens"] = {}
     hass.http.register_view(XMLTVView())
+    hass.http.register_view(M3UView())
     return True
 
 
@@ -167,6 +170,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     ] = coordinator_general
     await coordinator_general.async_config_entry_first_refresh()
     if coordinator_general.data is not None:
+        # Never poll the lineup: legacy devices' LineupURL is SiliconDust's cloud
+        # API (uvjim/hass_hdhomerun#119). Fetch it here and after HA-run scans.
         await coordinator_general.data.async_get_lineup_http()
         await coordinator_general.data.async_get_scanning_status()
         # Register the main device before the platforms load so that the tuner
@@ -193,10 +198,28 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     await coordinator_tuner_status.async_config_entry_first_refresh()
     # endregion
 
+    async def _async_channel_scan_finished() -> None:
+        """Re-read the lineup once a scan started from HA completes."""
+        try:
+            await coordinator_general.data.async_get_lineup_http()
+        except Exception as exc:  # pylint: disable=broad-except
+            _LOGGER.warning(log_formatter.format("lineup refresh failed: %s"), exc)
+        else:
+            coordinator_general.async_update_listeners()
+
+    config_entry.async_on_unload(
+        async_dispatcher_connect(
+            hass,
+            f"{SIGNAL_HDHOMERUN_CHANNEL_SCAN_FINISHED}_{config_entry.entry_id}",
+            _async_channel_scan_finished,
+        )
+    )
+
     if config_entry.options.get(CONF_EPG_ENABLED, False):
         proxy = EPGProxy(
             hass, config_entry.entry_id, config_entry.data[CONF_HOST],
             config_entry.options.get(CONF_EPG_INTERVAL, DEF_EPG_INTERVAL),
+            lineup=lambda: getattr(coordinator_general.data, "channels", None) or [],
         )
         await proxy.load()
         hass.data[DOMAIN][config_entry.entry_id][CONF_EPG_PROXY] = proxy

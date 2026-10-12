@@ -45,17 +45,17 @@ to provide `DeviceAuth` in its local `discover.json`, and HA to reach
 `https://api.hdhomerun.com/api/xmltv`. The integration requests gzip and reads
 the current auth immediately before each download; it never stores the auth.
 
-The **EPG status** sensor exposes `url` and `gzip_url` attributes. Set HA's internal or
-external URL to an address UHF can reach (otherwise this attribute is only a
-relative path), then enter that full URL as UHF's XMLTV source. No HA bearer
-token is needed. A valid cache serves even when the tuner or SiliconDust is
-temporarily offline. Until the first successful refresh the URL returns 503;
+The **EPG status** sensor exposes `url` and `gzip_url` attributes. Set HA's
+internal or external URL to an address UHF can reach (otherwise this attribute
+is only a relative path), then enter that full URL as UHF's XMLTV source. No HA
+bearer token is needed. A valid cache serves even when the tuner or SiliconDust
+is temporarily offline. Until the first successful refresh the URL returns 503;
 disabled/unloaded/rotated URLs return 404. The status sensor shows `empty`,
 `ready`, `refresh_failed`, or `expired`, plus last fetch time, cache age in
-hours, programme/channel counts, earliest start/latest stop, and advisory
-lineup-to-XMLTV display-name matches and up to 20 unmatched examples. XMLTV
-channel IDs are not rewritten; check mapping in UHF itself. Feed coverage and
-lineup can differ from the local device, particularly with multiple tuners.
+hours, programme/channel counts, earliest start/latest stop, and how many
+lineup channels match an XMLTV channel ID, with up to 20 unmatched examples.
+Feed coverage and lineup can differ from the local device, particularly with
+multiple tuners.
 
 The normal URL serves XML and uses HTTP gzip compression when the client
 advertises `Accept-Encoding: gzip`. The `gzip_url` appends `.xml.gz` and always
@@ -67,17 +67,38 @@ the gzip snapshot adds memory overhead but is not stored as a second disk copy.
 Upstream downloads already request gzip; actual compression depends on
 SiliconDust's response, and the size limit still applies after decompression.
 
-**Treat the URL as a password:** anyone who obtains it can read the guide.
-Tokens contain 128 random bits encoded as 22 URL-safe characters. On updating
-from the former 64-character format, the next integration load generates a new
-token; copy the new URL into your player. Old URLs are not supported.
-Use HTTPS if UHF connects across an untrusted network. The URL is visible to
-HA users via entity attributes and may appear in HA history, reverse-proxy
-access logs, or UHF configuration. Do not publish it in screenshots or issue
-reports. The **Rotate EPG URL** button immediately invalidates the previous
-URL; update UHF after rotating. Disabling this option invalidates the URL
-while disabled but retains the private HA storage snapshot/token for re-enable.
-Removing an entry does not automatically delete its stored guide; remove its
+The sensor's `m3u_url` attribute is a matching M3U playlist that uses the same
+secret token. Each lineup channel's `tvg-id` is set to its XMLTV channel ID, so
+UHF, Channels, Jellyfin or Plex can pair the playlist with the guide without
+manual mapping. Channels are matched by virtual channel number (the XMLTV
+`lcn` or a display name), then by an unambiguous channel name. Unmatched
+channels are still listed, without `tvg-id`. The playlist's `url-tvg` header
+points at the XMLTV URL. Stream URLs are the tuner's own local
+`http://<tuner>:5004/...` addresses, so the client must reach the tuner
+directly. DRM-protected, hidden and disabled channels are omitted. Serving the
+playlist makes no requests. The lineup is read when the integration loads and
+again when a channel scan started from HA finishes; it is never polled, because
+legacy tuners' lineup URL is SiliconDust's cloud API (see
+[upstream issue 119](https://github.com/uvjim/hass_hdhomerun/issues/119)).
+After a scan or channel changes made in another app, press **Refresh Lineup**
+(one request per press; it also works as an automation action). The **Lineup
+Updated** sensor shows when the lineup was last fetched successfully, and the
+button reports an error if the tuner did not return one. The playlist
+returns 503 until a lineup is available; UDP-discovered devices
+do not expose one. XMLTV channel IDs themselves are not rewritten.
+
+**Treat the URLs as passwords:** anyone who obtains them can read the guide and
+the lineup. Tokens contain 128 random bits encoded as 22 URL-safe characters.
+On updating from the former 64-character format, the next integration load
+generates a new token; copy the new URLs into your player. Old URLs are not
+supported. Use HTTPS if UHF connects across an untrusted network. The URLs are
+visible to HA users via entity attributes and may appear in HA history,
+reverse-proxy access logs, or UHF configuration. Do not publish them in
+screenshots or issue reports. The **Rotate EPG URL** button immediately
+invalidates the previous XMLTV and M3U URLs; update UHF after rotating.
+Disabling this option invalidates the URLs while disabled but retains the
+private HA storage snapshot/token for re-enable. Removing an entry does not
+automatically delete its stored guide; remove its
 `.storage/hdhomerun/epg_<entry_id>` file manually if retiring the device.
 SiliconDust determines the available guide window (typically two days, or
 longer with eligible DVR service); this proxy cannot add missing guide data.
@@ -113,6 +134,7 @@ device was discovered and what its capabilities are.
 |---|---|:---:|---|
 | Device | Channel Scan | ✔️ | Requires the source to be selected first (see [here](#select)) |
 | Device | Restart | ✔️ |  |
+| Device | Refresh Lineup | ✔️ | Re-reads the channel lineup once (it is never polled). HTTP-discovered devices only |
 
 ### Select
 
@@ -127,6 +149,7 @@ device was discovered and what its capabilities are.
 | Device | Channel Count | ✔️ | Number of channels currently tuned on the device | | |
 | Device | Disabled Channels | ✔️ | Number of channels marked as disabled in the channel list | List of channel names | |
 | Device | Favourite Channels | ✔️ | Number of channels marked as favorites in the channel list | List of channel names | |
+| Device | Lineup Updated | ✔️ | When the channel lineup was last fetched successfully | | HTTP-discovered devices only |
 | Device | Tuner Count | ✔️ | Number of tuners the device has | | |
 | Tuner | Tuner X | ✔️ | Status of the tuner; `Idle`, `In use`, `Scanning` or the channel being watched | Frequency, signal strength, signal quality, symbol quality, network rate and target IP (as applicable) | X is the tuner number. |
 | Tuner | Frequency | ✔️ | | | |

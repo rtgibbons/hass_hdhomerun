@@ -80,24 +80,23 @@ class EPGStatus(SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict:
-        """Expose URL, cache age, coverage and advisory lineup/name matches."""
+        """Expose URLs, cache age, coverage and lineup-to-XMLTV ID matches."""
         proxy = self.proxy
         base = self.hass.config.external_url or self.hass.config.internal_url or ""
         path = f"/api/hdhomerun/xmltv/{proxy.token}"
         attrs = {
             "url": f"{base.rstrip('/')}{path}",
             "gzip_url": f"{base.rstrip('/')}{path}.xml.gz",
+            "m3u_url": f"{base.rstrip('/')}/api/hdhomerun/m3u/{proxy.token}",
             "fetched_at": proxy.fetched_at,
             "cache_age_hours": round((datetime.now(timezone.utc) - datetime.fromisoformat(proxy.fetched_at)).total_seconds() / 3600, 2) if proxy.fetched_at else None,
             "last_error_type": proxy.error,
-            **{key: value for key, value in proxy.summary.items() if key != "channel_names"},
+            **proxy.summary,
         }
         device = self.hass.data[DOMAIN][self.entry.entry_id][CONF_DATA_COORDINATOR_GENERAL].data
         lineup = device.channels or []
-        names = {name.casefold() for name in proxy.summary.get("channel_names", [])}
         unmatched = [f"{channel.get('GuideNumber', '?')} {channel.get('GuideName', '')}" for channel in lineup
-                     if channel.get("GuideName", "").casefold() not in names
-                     and str(channel.get("GuideNumber", "")).casefold() not in names]
+                     if proxy.index.match(channel.get("GuideNumber"), channel.get("GuideName")) is None]
         attrs["lineup_channels"] = len(lineup)
         attrs["lineup_name_matches"] = len(lineup) - len(unmatched)
         attrs["unmatched_lineup_examples"] = unmatched[:20]
@@ -393,6 +392,16 @@ async def async_setup_entry(
                         name="Favourite Channels",
                         state_class=SensorStateClass.MEASUREMENT,
                         translation_key="fav_channels",
+                    ),
+                ),
+                HDHomerunSensor(
+                    config_entry=config_entry,
+                    coordinator=coordinator_general,
+                    description=SensorEntityDescription(
+                        device_class=SensorDeviceClass.TIMESTAMP,
+                        key="lineup_fetched_at",
+                        name="Lineup Updated",
+                        translation_key="lineup_updated",
                     ),
                 ),
                 HDHomerunSensor(

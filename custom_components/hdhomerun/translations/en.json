@@ -42,6 +42,9 @@
             "channel_scan": {
                 "name": "Channel Scan"
             },
+            "refresh_lineup": {
+                "name": "Refresh Lineup"
+            },
             "restart": {
                 "name": "Restart"
             }
@@ -61,6 +64,9 @@
             },
             "fav_channels": {
                 "name": "Favourite Channels"
+            },
+            "lineup_updated": {
+                "name": "Lineup Updated"
             },
             "tuner_count": {
                 "name": "Tuner Count"

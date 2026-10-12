@@ -6,6 +6,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import struct
+from datetime import datetime, timezone
 from enum import Enum, StrEnum, unique
 from typing import Any
 from urllib.parse import urlparse
@@ -66,6 +67,7 @@ class HDHomeRunDevice:
         self._channel_sources: list[str] | None = None
         self._device_id: str | None = None
         self._device_type: DeviceType | None = None
+        self._lineup_fetched_at: datetime | None = None
         self._lineup_url: str | None = None
         self._sys_hwmodel: str | None = None
         self._sys_model: str | None = None
@@ -247,6 +249,7 @@ class HDHomeRunDevice:
                     continue
 
                 self._raw_details[key] = await resp.json()
+                self._lineup_fetched_at = datetime.now(timezone.utc)
                 _LOGGER.debug(
                     self._log_formatter.format("results for %s: %s"),
                     key,
@@ -565,6 +568,11 @@ class HDHomeRunDevice:
     def latest_version(self) -> str | None:
         """Get the latest available version (HTTP API)."""
         return self._raw_details.get("discover", {}).get("UpgradeAvailable", None)
+
+    @property
+    def lineup_fetched_at(self) -> datetime | None:
+        """Get when the lineup was last fetched successfully."""
+        return self._lineup_fetched_at
 
     @property
     def lineup_url(self) -> str | None:
