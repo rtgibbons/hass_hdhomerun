@@ -40,7 +40,10 @@ Enable **XMLTV EPG proxy** in the device's integration options. The default
 refresh is six hours; 3, 6, 12 and 24 hours are available. Refreshes are
 slightly randomized to avoid fixed-time requests to SiliconDust. The first
 background fetch starts within five minutes; use the **Refresh EPG** button
-to fetch immediately. This feature is off by default and requires the tuner
+to fetch immediately. Automatic refreshes also execute the button action, so
+its timestamp shows the last refresh attempt, not just the last manual press.
+Check **EPG status** for the last successful fetch and any errors.
+This feature is off by default and requires the tuner
 to provide `DeviceAuth` in its local `discover.json`, and HA to reach
 `https://api.hdhomerun.com/api/xmltv`. The integration requests gzip and reads
 the current auth immediately before each download; it never stores the auth.
@@ -56,6 +59,22 @@ hours, programme/channel counts, earliest start/latest stop, and how many
 lineup channels match an XMLTV channel ID, with up to 20 unmatched examples.
 Feed coverage and lineup can differ from the local device, particularly with
 multiple tuners.
+
+Two diagnostic timestamp sensors make freshness visible without opening the
+status attributes: **EPG Updated** is the last successful guide fetch, and
+**EPG Coverage End** is the latest programme end time in the cached guide
+(not a guarantee of coverage for every channel). Both are unknown until their
+timestamps are available, use the restored cache after a restart, and retain
+their last good values if a refresh fails. The existing `fetched_at` and
+`coverage_end` status attributes remain available.
+
+**EPG Consecutive Failures** counts failed refresh attempts, including download,
+validation and cache-write failures, and resets to zero after a successful
+refresh. **EPG Last Failure** records the latest failed attempt and is unknown
+until the first failure; a later success does not clear it. Both are diagnostic
+sensors, apply to manual and automatic refreshes, and are saved with the guide
+cache across restarts. If storage is unavailable, failure history still updates
+in memory but cannot be persisted until storage recovers.
 
 The normal URL serves XML and uses HTTP gzip compression when the client
 advertises `Accept-Encoding: gzip`. The `gzip_url` appends `.xml.gz` and always
@@ -86,6 +105,10 @@ Updated** sensor shows when the lineup was last fetched successfully, and the
 button reports an error if the tuner did not return one. The playlist
 returns 503 until a lineup is available; UDP-discovered devices
 do not expose one. XMLTV channel IDs themselves are not rewritten.
+
+Startup and post-scan lineup refreshes also execute **Refresh Lineup**, updating
+its timestamp. Disabling either refresh button does not disable automatic
+fetches; the integration fetches directly when its button is disabled.
 
 With the proxy enabled, each tuner also gets a **Programme** sensor. Its state
 is the title of the programme airing on the tuned channel, from the cached
@@ -158,6 +181,10 @@ device was discovered and what its capabilities are.
 |---|---|:---:|---|---|---|
 | Device | Channel Count | ✔️ | Number of channels currently tuned on the device | | |
 | Device | Disabled Channels | ✔️ | Number of channels marked as disabled in the channel list | List of channel names | |
+| Device | EPG Updated | ✔️ | When the guide was last fetched successfully | | Only with the XMLTV EPG proxy enabled |
+| Device | EPG Coverage End | ✔️ | Latest programme end time in the cached guide | | Only with the XMLTV EPG proxy enabled; coverage may vary by channel |
+| Device | EPG Consecutive Failures | ✔️ | Failed refresh attempts since the last successful fetch | | Only with the XMLTV EPG proxy enabled |
+| Device | EPG Last Failure | ✔️ | When the latest refresh failure occurred | | Only with the XMLTV EPG proxy enabled; retained after recovery |
 | Device | Favourite Channels | ✔️ | Number of channels marked as favorites in the channel list | List of channel names | |
 | Device | Lineup Updated | ✔️ | When the channel lineup was last fetched successfully | | HTTP-discovered devices only |
 | Device | Tuner Count | ✔️ | Number of tuners the device has | | |

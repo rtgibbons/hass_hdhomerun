@@ -9,7 +9,7 @@ import logging
 import random
 import secrets
 from bisect import bisect_right
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta, timezone
 from functools import partial
 from io import BytesIO
@@ -21,6 +21,7 @@ from aiohttp import web
 from defusedxml import ElementTree
 from homeassistant.components.http import KEY_HASS, HomeAssistantView
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.storage import Store
 
@@ -267,6 +268,8 @@ class EPGProxy:
         self.summary: dict = {}
         self.index = GuideIndex()
         self.error: str | None = None
+        self.consecutive_failures = 0
+        self.last_failure: str | None = None
         self.listeners: list = []
         self._lock = asyncio.Lock()
         self._task: asyncio.Task | None = None
@@ -276,6 +279,18 @@ class EPGProxy:
         stored = await self.store.async_load() or {}
         if not isinstance(stored, dict):
             stored = {}
+        failures = stored.get("consecutive_failures", 0)
+        if type(failures) is int and failures >= 0:
+            self.consecutive_failures = failures
+        last_failure = stored.get("last_failure")
+        if isinstance(last_failure, str):
+            try:
+                parsed_failure = datetime.fromisoformat(last_failure)
+            except ValueError:
+                pass
+            else:
+                if parsed_failure.tzinfo is not None:
+                    self.last_failure = last_failure
         token = stored.get("token")
         self.token = (
             token
@@ -315,12 +330,15 @@ class EPGProxy:
         token: str | None = None,
         xml: str | None = None,
         fetched_at: str | None = None,
+        consecutive_failures: int | None = None,
     ) -> None:
         await self.store.async_save(
             {
                 "token": token if token is not None else self.token,
                 "xml": xml if xml is not None else self.xml,
                 "fetched_at": fetched_at if fetched_at is not None else self.fetched_at,
+                "consecutive_failures": consecutive_failures if consecutive_failures is not None else self.consecutive_failures,
+                "last_failure": self.last_failure,
             }
         )
 
@@ -373,7 +391,7 @@ class EPGProxy:
                     partial(gzip.compress, bytes(body), compresslevel=6, mtime=0)
                 )
                 fetched_at = datetime.now(timezone.utc).isoformat()
-                await self._save(xml=xml, fetched_at=fetched_at)
+                await self._save(xml=xml, fetched_at=fetched_at, consecutive_failures=0)
             except (
                 aiohttp.ClientError,
                 asyncio.TimeoutError,
@@ -389,9 +407,15 @@ class EPGProxy:
                     if isinstance(exc, aiohttp.ClientResponseError)
                     else type(exc).__name__
                 )
+                self.consecutive_failures += 1
+                self.last_failure = datetime.now(timezone.utc).isoformat()
                 _LOGGER.warning(
                     "XMLTV refresh failed (%s); keeping last good cache", self.error
                 )
+                try:
+                    await self._save()
+                except OSError:
+                    _LOGGER.warning("Could not persist XMLTV failure history")
                 if self.xml is not None:
                     # Move the now-playing window forward while offline.
                     _, self.index = await self.hass.async_add_executor_job(
@@ -414,6 +438,7 @@ class EPGProxy:
                 index,
                 None,
             )
+            self.consecutive_failures = 0
             self.notify()
             return True
 
@@ -427,17 +452,21 @@ class EPGProxy:
             tokens[token] = self
             self.notify()
 
-    def start(self) -> None:
+    def start(self, refresh: Callable[[], Awaitable[object]] | None = None) -> None:
         """Start jittered polling; the first attempt is soon, not during setup."""
         self._task = self.hass.async_create_background_task(
-            self._run(), "HDHomeRun XMLTV refresh"
+            self._run(refresh or self.refresh), "HDHomeRun XMLTV refresh"
         )
 
-    async def _run(self) -> None:
+    async def _run(self, refresh: Callable[[], Awaitable[object]]) -> None:
         try:
             await asyncio.sleep(random.uniform(0, 300))
             while True:
-                await self.refresh()
+                try:
+                    await refresh()
+                except HomeAssistantError as exc:
+                    # A failed button action must not stop subsequent refreshes.
+                    _LOGGER.warning("Scheduled XMLTV refresh failed: %s", exc)
                 await asyncio.sleep(self.interval * 3600 * random.uniform(0.9, 1.1))
         except asyncio.CancelledError:
             return

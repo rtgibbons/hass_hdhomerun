@@ -59,6 +59,10 @@
         },
         "sensor": {
             "epg_status": {"name": "EPG status"},
+            "epg_updated": {"name": "EPG Updated"},
+            "epg_coverage_end": {"name": "EPG Coverage End"},
+            "epg_consecutive_failures": {"name": "EPG Consecutive Failures"},
+            "epg_last_failure": {"name": "EPG Last Failure"},
             "channel_count": {
                 "name": "Channel Count"
             },

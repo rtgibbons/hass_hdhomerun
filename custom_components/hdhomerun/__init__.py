@@ -4,8 +4,9 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from datetime import timedelta
+from functools import partial
 from typing import Any
 
 import homeassistant.helpers.device_registry as dr
@@ -68,6 +69,20 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 async def _async_reload(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
     """Reload the config entry."""
     await hass.config_entries.async_reload(config_entry.entry_id)
+
+
+async def _async_press_refresh_button(
+    hass: HomeAssistant, unique_id: str, fallback: Callable[[], Awaitable[Any]]
+) -> None:
+    """Run automatic refreshes through the button, unless it is disabled."""
+    registry = er.async_get(hass)
+    entity_id = registry.async_get_entity_id("button", DOMAIN, unique_id)
+    if entity_id is None or registry.async_get(entity_id).disabled:
+        await fallback()
+        return
+    await hass.services.async_call(
+        "button", "press", {"entity_id": entity_id}, blocking=True
+    )
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
@@ -173,9 +188,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     ] = coordinator_general
     await coordinator_general.async_config_entry_first_refresh()
     if coordinator_general.data is not None:
-        # Never poll the lineup: legacy devices' LineupURL is SiliconDust's cloud
-        # API (uvjim/hass_hdhomerun#119). Fetch it here and after HA-run scans.
-        await coordinator_general.data.async_get_lineup_http()
         await coordinator_general.data.async_get_scanning_status()
         # Register the main device before the platforms load so that the tuner
         # devices can always find it to link to (see HDHomerunTunerEntity.device_info).
@@ -201,10 +213,14 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     await coordinator_tuner_status.async_config_entry_first_refresh()
     # endregion
 
-    async def _async_channel_scan_finished() -> None:
-        """Re-read the lineup once a scan started from HA completes."""
+    async def _async_refresh_lineup() -> None:
+        """Refresh the lineup at startup and after HA-run scans, never by polling."""
         try:
-            await coordinator_general.data.async_get_lineup_http()
+            await _async_press_refresh_button(
+                hass,
+                f"{config_entry.unique_id}::button::refresh_lineup",
+                coordinator_general.data.async_get_lineup_http,
+            )
         except Exception as exc:  # pylint: disable=broad-except
             _LOGGER.warning(log_formatter.format("lineup refresh failed: %s"), exc)
         else:
@@ -214,7 +230,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         async_dispatcher_connect(
             hass,
             f"{SIGNAL_HDHOMERUN_CHANNEL_SCAN_FINISHED}_{config_entry.entry_id}",
-            _async_channel_scan_finished,
+            _async_refresh_lineup,
         )
     )
 
@@ -233,8 +249,14 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     _LOGGER.debug(log_formatter.format("setting up platforms: %s"), setup_platforms)
     await hass.config_entries.async_forward_entry_setups(config_entry, setup_platforms)
     # endregion
+    await _async_refresh_lineup()
     if config_entry.options.get(CONF_EPG_ENABLED, False):
-        proxy.start()
+        proxy.start(partial(
+            _async_press_refresh_button,
+            hass,
+            f"{config_entry.unique_id}::epg::refresh",
+            proxy.refresh,
+        ))
 
     _LOGGER.debug(log_formatter.format("exited"))
     return True

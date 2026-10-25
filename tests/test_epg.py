@@ -127,6 +127,62 @@ class Hass:
 
 
 @pytest.mark.asyncio
+async def test_failure_history_survives_restart_and_resets_on_success(monkeypatch):
+    session = Session(b"Forbidden")
+    stored = Store()
+    monkeypatch.setattr(epg, "async_get_clientsession", lambda _: session)
+    monkeypatch.setattr(epg, "Store", lambda *args, **kwargs: stored)
+    now = datetime(2026, 10, 25, 15, tzinfo=timezone.utc)
+
+    class Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return now
+
+    monkeypatch.setattr(epg, "datetime", Clock)
+    proxy = epg.EPGProxy(Hass(), "entry", "192.0.2.1", 6)
+    await proxy.load()
+    assert proxy.consecutive_failures == 0 and proxy.last_failure is None
+    assert not await proxy.refresh()  # Failures also count before any good cache.
+    assert proxy.consecutive_failures == 1
+    assert proxy.last_failure == "2026-10-25T15:00:00+00:00"
+
+    restored = epg.EPGProxy(Hass(), "entry", "192.0.2.1", 6)
+    await restored.load()
+    assert restored.consecutive_failures == 1
+    assert restored.last_failure == "2026-10-25T15:00:00+00:00"
+    now += timedelta(hours=6)
+    assert not await restored.refresh()
+    assert restored.consecutive_failures == 2
+    assert restored.last_failure == "2026-10-25T21:00:00+00:00"
+
+    # A downloaded guide that cannot be committed is still a failed refresh.
+    session.xml = GUIDE
+    stored.fail = True
+    now += timedelta(hours=6)
+    assert not await restored.refresh()
+    assert restored.consecutive_failures == 3
+    assert restored.last_failure == "2026-10-26T03:00:00+00:00"
+    assert restored.fetched_at is None
+    stored.fail = False
+    assert await restored.refresh()
+    assert restored.consecutive_failures == 0
+    assert restored.last_failure == "2026-10-26T03:00:00+00:00"
+
+    recovered = epg.EPGProxy(Hass(), "entry", "192.0.2.1", 6)
+    await recovered.load()
+    assert recovered.consecutive_failures == 0
+    assert recovered.last_failure == "2026-10-26T03:00:00+00:00"
+    session.xml = b"Forbidden"
+    now += timedelta(hours=6)
+    assert not await recovered.refresh()
+    assert recovered.consecutive_failures == 1
+    assert recovered.last_failure == "2026-10-26T09:00:00+00:00"
+    assert recovered.fetched_at == "2026-10-26T03:00:00+00:00"
+    assert recovered.xml == GUIDE.decode()
+
+
+@pytest.mark.asyncio
 async def test_refresh_failure_retains_snapshot_and_rotation_revokes(monkeypatch):
     session = Session(GUIDE)
     monkeypatch.setattr(epg, "async_get_clientsession", lambda _: session)
