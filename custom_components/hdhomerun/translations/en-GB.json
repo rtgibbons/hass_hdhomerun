@@ -1,0 +1,172 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Device is already configured.",
+            "no_additional": "No additional devices found."
+        },
+        "error": {
+            "generic_hdhomerun_error": "{error_message}",
+            "timeout_error": "Timeout connecting to device."
+        },
+        "progress": {
+            "task_discover": "Discovering tuners..."
+        },
+        "step": {
+            "friendly_name": {
+                "data": {
+                    "friendly_name": "Friendly name"
+                },
+                "title": "Friendly name"
+            },
+            "select_device": {
+                "data": {
+                    "host": "Device"
+                },
+                "description": "Select the device from the list below.\nDevices already configured are not shown in the list."
+            },
+            "user": {
+                "data": {
+                    "host": "Host"
+                },
+                "description": "Enter the address of an HDHomeRun device on the network.\nLeave blank to invoke discovery.",
+                "title": "Enter an address"
+            }
+        }
+    },
+    "entity": {
+        "binary_sensor": {
+            "update_available": {
+                "name": "Update available"
+            },
+            "all_tuners_busy": {
+                "name": "All Tuners Busy"
+            },
+            "channel_scanning": {
+                "name": "Channel Scanning"
+            }
+        },
+        "button": {
+            "epg_refresh": {"name": "Refresh EPG"},
+            "epg_rotate": {"name": "Rotate EPG URL"},
+            "channel_scan": {
+                "name": "Channel Scan"
+            },
+            "refresh_lineup": {
+                "name": "Refresh Lineup"
+            },
+            "restart": {
+                "name": "Restart"
+            }
+        },
+        "select": {
+            "channel_sources": {
+                "name": "Channel Sources"
+            }
+        },
+        "sensor": {
+            "version": {"name": "Version"},
+            "newest_version": {"name": "Newest Version"},
+            "epg_status": {
+                "name": "EPG status",
+                "state": {
+                    "empty": "Empty",
+                    "expired": "Expired",
+                    "refresh_failed": "Refresh failed",
+                    "ready": "Ready"
+                }
+            },
+            "epg_updated": {"name": "EPG Updated"},
+            "epg_coverage_end": {"name": "EPG Coverage End"},
+            "epg_consecutive_failures": {"name": "EPG Consecutive Failures"},
+            "epg_last_failure": {"name": "EPG Last Failure"},
+            "channel_count": {
+                "name": "Channel Count"
+            },
+            "disabled_channels": {
+                "name": "Disabled Channels"
+            },
+            "fav_channels": {
+                "name": "Favourite Channels"
+            },
+            "lineup_updated": {
+                "name": "Lineup Updated"
+            },
+            "tuner_count": {
+                "name": "Tuner Count"
+            },
+            "tuners_available": {
+                "name": "Tuners Available"
+            },
+            "tuner_frequency": {
+                "name": "Frequency"
+            },
+            "tuner_network_rate": {
+                "name": "Network Rate"
+            },
+            "tuner_programme": {
+                "name": "Programme"
+            },
+            "tuner_signal_quality": {
+                "name": "Signal Quality"
+            },
+            "tuner_signal_strength": {
+                "name": "Signal Strength"
+            },
+            "tuner_status": {
+                "state": {
+                    "idle": "Idle",
+                    "in_use": "In use",
+                    "scanning": "Scanning"
+                }
+            },
+            "tuner_symbol_quality": {
+                "name": "Symbol Quality"
+            },
+            "tuner_target_ip": {
+                "name": "Target IP"
+            }
+        },
+        "update": {
+            "update": {
+                "name": "Firmware"
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "options": {
+                "data": {
+                    "epg_enabled": "Enable XMLTV EPG proxy",
+                    "epg_interval_hours": "EPG refresh interval (hours)",
+                    "channel_entity_picture_path": "Channel logo path",
+                    "channel_format": "Pick the format you'd like the channel to be displayed in"
+                },
+                "title": "Options"
+            },
+            "timeouts": {
+                "data": {
+                    "scan_interval": "Scan interval",
+                    "scan_interval_tuner_status": "Tuner status update"
+                },
+                "title": "Timeouts"
+            }
+        }
+    },
+    "exceptions": {
+        "epg_refresh_failed": {
+            "message": "EPG refresh failed; see the EPG status sensor"
+        },
+        "lineup_refresh_failed": {
+            "message": "Lineup refresh failed; the tuner returned an error"
+        }
+    },
+    "selector": {
+        "channel_format": {
+            "options": {
+                "channel_name": "Channel name, e.g. BBC One HD",
+                "channel_number": "Channel number, e.g. 101",
+                "channel_number_name": "Channel number and name, e.g. 101: BBC One HD"
+            }
+        }
+    }
+}

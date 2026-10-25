@@ -30,6 +30,11 @@ jobs:
         run: ruff check custom_components tests --output-format github
       - name: Tests
         run: python -m pytest -q tests
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Dashboard tests
+        run: node --test tests/test_dashboard*.mjs
 
   hassfest:
     name: "Hassfest"

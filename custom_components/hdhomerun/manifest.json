@@ -1,6 +1,7 @@
 {
   "domain": "hdhomerun",
   "name": "HDHomeRun",
+  "after_dependencies": ["frontend"],
   "codeowners": [
     "@uvjim"
   ],

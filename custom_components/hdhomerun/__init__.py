@@ -59,10 +59,13 @@ _VIA_DEVICE_ID_SUPPORTED: bool = (MAJOR_VERSION, MINOR_VERSION) >= (2026, 8)
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
-    """Register one HTTP route for all loaded EPG-enabled entries."""
+    """Register shared EPG routes and the opt-in dashboard assets."""
+    from .dashboard import async_setup_frontend
+
     hass.data.setdefault(DOMAIN, {})["_epg_tokens"] = {}
     hass.http.register_view(XMLTVView())
     hass.http.register_view(M3UView())
+    await async_setup_frontend(hass)
     return True
 
 
@@ -324,6 +327,14 @@ class HDHomerunEntity(CoordinatorEntity):
         )
 
     @property
+    def suggested_object_id(self) -> str:
+        """Keep legacy ID bases independent of the instance's display language."""
+        # Firmware was already translated before localization was introduced.
+        if self.entity_domain == "update" and self.entity_description.translation_key == "update":
+            return "Firmware"
+        return self.entity_description.name
+
+    @property
     def device_info(self) -> DeviceInfo:
         """Return the device information of the entity."""
         return _main_device_info(self._config, self.coordinator.data)
@@ -358,12 +369,23 @@ class HDHomerunTunerEntity(CoordinatorEntity):
         if not getattr(self, "entity_domain", None):
             self.entity_domain: str = ""
 
-        self._attr_has_entity_name = False
+        self._attr_has_entity_name = True
         self._attr_unique_id = (
             f"{config_entry.unique_id}::"
             f"{self.entity_domain.lower()}::"
             f"{slugify(self.entity_description.name)}"
         )
+        # Tuner IDs historically had no device-name prefix. A valid entity_id
+        # suggestion is HA's public mechanism for a complete, unprefixed ID.
+        # The registry still takes precedence (including user-assigned IDs).
+        self.entity_id = f"{self.entity_domain}.{slugify(self.suggested_object_id)}"
+        if self.entity_description.translation_key == "tuner_status":
+            self._attr_name = None  # The primary entity uses the tuner's device name.
+
+    @property
+    def suggested_object_id(self) -> str:
+        """Preserve the complete legacy tuner ID, including its tuner number."""
+        return self.entity_description.name
 
     @property
     def device_info(self) -> DeviceInfo:

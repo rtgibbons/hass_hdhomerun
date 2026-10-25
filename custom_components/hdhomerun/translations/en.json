@@ -19,6 +19,9 @@
                 "title": "Friendly name"
             },
             "select_device": {
+                "data": {
+                    "host": "Device"
+                },
                 "description": "Select the device from the list below.\nDevices already configured are not shown in the list."
             },
             "user": {
@@ -32,6 +35,9 @@
     },
     "entity": {
         "binary_sensor": {
+            "update_available": {
+                "name": "Update available"
+            },
             "all_tuners_busy": {
                 "name": "All Tuners Busy"
             },
@@ -58,7 +64,17 @@
             }
         },
         "sensor": {
-            "epg_status": {"name": "EPG status"},
+            "version": {"name": "Version"},
+            "newest_version": {"name": "Newest Version"},
+            "epg_status": {
+                "name": "EPG status",
+                "state": {
+                    "empty": "Empty",
+                    "expired": "Expired",
+                    "refresh_failed": "Refresh failed",
+                    "ready": "Ready"
+                }
+            },
             "epg_updated": {"name": "EPG Updated"},
             "epg_coverage_end": {"name": "EPG Coverage End"},
             "epg_consecutive_failures": {"name": "EPG Consecutive Failures"},
@@ -70,7 +86,7 @@
                 "name": "Disabled Channels"
             },
             "fav_channels": {
-                "name": "Favourite Channels"
+                "name": "Favorite Channels"
             },
             "lineup_updated": {
                 "name": "Lineup Updated"
@@ -88,7 +104,7 @@
                 "name": "Network Rate"
             },
             "tuner_programme": {
-                "name": "Programme"
+                "name": "Program"
             },
             "tuner_signal_quality": {
                 "name": "Signal Quality"
@@ -134,6 +150,14 @@
                 },
                 "title": "Timeouts"
             }
+        }
+    },
+    "exceptions": {
+        "epg_refresh_failed": {
+            "message": "EPG refresh failed; see the EPG status sensor"
+        },
+        "lineup_refresh_failed": {
+            "message": "Lineup refresh failed; the tuner returned an error"
         }
     },
     "selector": {

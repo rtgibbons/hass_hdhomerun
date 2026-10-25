@@ -217,7 +217,11 @@ class LineupButton(HDHomerunEntity, ButtonEntity):
         await device.async_get_lineup_http()
         self.coordinator.async_update_listeners()
         if device.lineup_fetched_at == previous:
-            raise HomeAssistantError("Lineup refresh failed; the tuner returned an error")
+            raise HomeAssistantError(
+                "Lineup refresh failed; the tuner returned an error",
+                translation_domain=DOMAIN,
+                translation_key="lineup_refresh_failed",
+            )
 
 
 class EPGButton(ButtonEntity):
@@ -237,6 +241,10 @@ class EPGButton(ButtonEntity):
         """Refresh or revoke the previous URL."""
         if self.action == "refresh":
             if not await self.proxy.refresh():
-                raise HomeAssistantError("EPG refresh failed; see the EPG status sensor")
+                raise HomeAssistantError(
+                    "EPG refresh failed; see the EPG status sensor",
+                    translation_domain=DOMAIN,
+                    translation_key="epg_refresh_failed",
+                )
         else:
             await self.proxy.rotate(self.hass.data[DOMAIN]["_epg_tokens"])

@@ -272,6 +272,79 @@ default is `Channel name`.
 
 _This setting is only effective when a tuner is actively tuned to a channel._
 
+## Dashboard
+
+The integration includes an optional HDHomeRun dashboard and its cards. There
+are no separate card downloads and no sidebar dashboard is created automatically.
+
+After installing or updating the integration, restart Home Assistant and refresh
+your browser. In Home Assistant 2026.5 or later, open **Settings → Dashboards →
+Add dashboard → Community dashboards → HDHomeRun**. Add it once and choose
+whether to show it in your sidebar.
+
+On earlier supported Home Assistant versions, create a new blank dashboard and
+replace its raw configuration with:
+
+```yaml
+strategy:
+  type: custom:hdhomerun
+```
+
+The managed dashboard discovers the integration's receivers and tuners from
+the entity registry, including renamed entities. Each receiver has its own
+overview and maintenance subview. Missing, disabled, or hidden entities are
+omitted; enable optional diagnostic entities in **Settings → Devices & services**
+if you want to display them. The dashboard does not enable entities itself.
+EPG details appear only when the XMLTV proxy is enabled. Maintenance actions
+require confirmation; opening a dashboard never starts a scan or restarts a device.
+
+### Updates and customization
+
+Dashboard layout and card improvements ship with integration updates. After a
+normal HACS update, restart Home Assistant and refresh the browser to load the
+new bundled assets. You do not need to delete and re-add the dashboard. Existing
+user-created dashboards, including dashboards using other cards, are not changed.
+If you **Take control** of the generated dashboard, its layout becomes your own
+static configuration and no longer receives generated layout updates; bundled
+cards still update. Keep the strategy configuration for managed layout updates.
+
+Dashboard text follows each viewer's language and clock preferences; `en` uses
+US English and `en-GB` uses British English. Native entity names follow Home
+Assistant's instance language. Entity IDs, unique IDs, and user-assigned names
+are preserved, including legacy spelling when generating new entity IDs.
+Older frontends without strategy regeneration support (including HA 2026.2)
+need a browser reload after changing language to update generated section labels.
+
+### Capacity history and reception overlays
+
+The full-width capacity chart uses whole-number tuner counts and shows 24, 36,
+or 48 hours according to the chart's available width. History requires Home
+Assistant's History/Recorder integrations and retention covering that period.
+Unavailable data produces gaps rather than invented readings.
+
+Reception warnings and errors are translucent regions behind the capacity lines.
+Select a region (or focus it and press Enter/Space) for readings and timestamps.
+Idle and unknown readings are excluded. Signal quality warns below 70% and
+errors below 50%; symbol quality errors below 100%.
+
+Signal-strength thresholds depend on the source. They are not applied by default,
+because the integration cannot reliably infer the source. To enable them, edit
+the managed dashboard's raw strategy configuration, setting `signal_profile` to
+`antenna` or `cable`:
+
+```yaml
+strategy:
+  type: custom:hdhomerun
+  signal_profile: antenna
+```
+
+For antenna, strength warns below 75% and errors below 50%; for cable, it warns
+below 90% and errors below 80%. These bands follow
+[SiliconDust's signal-color implementation](https://github.com/Silicondust/libhdhomerun/blob/master/hdhomerun_device.c),
+not a guarantee of picture quality. Each shading interval reflects the worst
+observed active-tuner condition. The network-rate bar is a labeled 20 Mbit/s
+display scale (converted to your sensor's selected unit), not a bandwidth limit.
+
 ## Troubleshooting
 
 ### Debug Logging

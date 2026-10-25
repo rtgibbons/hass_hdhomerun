@@ -55,6 +55,8 @@ class EPGStatus(SensorEntity):
     """Guide health and UHF URL for an authenticated HA user."""
 
     _attr_has_entity_name = True
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = ["empty", "expired", "refresh_failed", "ready"]
 
     def __init__(self, entry: ConfigEntry, proxy: EPGProxy) -> None:
         """Bind the status entity to the entry's cache."""
@@ -263,6 +265,7 @@ async def async_setup_entry(
                     description=SensorEntityDescription(
                         key="current_firmware",
                         name="Version",
+                        translation_key="version",
                     ),
                 ),
                 HDHomerunSensor(
@@ -274,6 +277,7 @@ async def async_setup_entry(
                     description=SensorEntityDescription(
                         key="",
                         name="Newest Version",
+                        translation_key="newest_version",
                     ),
                 ),
             ]
@@ -287,6 +291,7 @@ async def async_setup_entry(
                     description=SensorEntityDescription(
                         key="current_firmware",
                         name="Version",
+                        translation_key="version",
                     ),
                 ),
                 HDHomerunSensor(
@@ -295,6 +300,7 @@ async def async_setup_entry(
                     description=SensorEntityDescription(
                         key="",
                         name="Newest Version",
+                        translation_key="newest_version",
                     ),
                 ),
             ]

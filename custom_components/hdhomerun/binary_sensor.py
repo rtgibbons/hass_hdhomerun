@@ -126,6 +126,7 @@ async def async_setup_entry(
                 description=BinarySensorEntityDescription(
                     key="",
                     name="Update available",
+                    translation_key="update_available",
                     device_class=BinarySensorDeviceClass.UPDATE,
                 ),
             )
@@ -147,6 +148,7 @@ async def async_setup_entry(
                 description=BinarySensorEntityDescription(
                     key="",
                     name="Update available",
+                    translation_key="update_available",
                 ),
             )
         )
