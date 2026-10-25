@@ -4,7 +4,8 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from homeassistant.components.select import DOMAIN as ENTITY_DOMAIN
 from homeassistant.components.select import SelectEntity, SelectEntityDescription

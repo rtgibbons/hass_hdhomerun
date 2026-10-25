@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Dict, List, Tuple
 
 import aiohttp
 import asyncclick as click
@@ -43,7 +42,7 @@ async def channel_scan(ctx: click.Context, source: str, target: str):
     _LOGGER.debug(log_formatter.format("entered, args: %s"), locals())
 
     async with ctx.obj as session:
-        device: List[HDHomeRunDevice] | HDHomeRunDevice = await Discover(
+        device: list[HDHomeRunDevice] | HDHomeRunDevice = await Discover(
             broadcast_address=target, session=session
         ).async_discover()
         if device:
@@ -94,7 +93,7 @@ async def discover(
     _LOGGER.debug(log_formatter.format("entered, args: %s"), locals())
 
     async with ctx.obj as session:
-        devices: List[HDHomeRunDevice] = await Discover(
+        devices: list[HDHomeRunDevice] = await Discover(
             broadcast_address=broadcast_address, mode=mode, session=session
         ).async_discover()
 
@@ -165,8 +164,8 @@ async def restart(target: str) -> None:
 
 
 def _build_display_data(
-    mappings: List[Tuple],
-    obj: HDHomeRunDevice | Dict,
+    mappings: list[tuple],
+    obj: HDHomeRunDevice | dict,
     indent: int = 0,
     title: str = "",
 ):
@@ -184,7 +183,7 @@ def _build_display_data(
             property_name, display_name = properties
 
         if display_value is None:
-            if isinstance(obj, Dict):
+            if isinstance(obj, dict):
                 display_value = obj.get(property_name)
             else:
                 display_value = getattr(obj, property_name, None)

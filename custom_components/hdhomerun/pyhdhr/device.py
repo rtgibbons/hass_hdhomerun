@@ -200,7 +200,6 @@ class HDHomeRunDevice:
             .rstrip("\0")
             .split("\n")
         )
-        channel: str
         channel_name: list[tuple[str, ...]] = [
             tuple(channel.replace(f"{tuner_channel_id}: ", "").split(" ", maxsplit=1))
             for channel in channel_names

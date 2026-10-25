@@ -4,20 +4,33 @@ on:
   workflow_dispatch:
   schedule:
     - cron:  "0 0 * * *"
-  # push:
-  #   branches:
-  #     - 'main'
-  #   paths-ignore:
-  #     - 'images/**'
-  #     - 'README.md'
-  # pull_request:
-  #   branches:
-  #     - 'main'
-  #   paths-ignore:
-  #     - 'images/**'
-  #     - 'README.md'
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop]
+
+permissions:
+  contents: read
 
 jobs:
+  tests:
+    name: Tests and Ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install test dependencies
+        run: |
+          python -m pip install -r requirements-test.txt
+          python -c 'import json; print("\n".join(json.load(open("custom_components/hdhomerun/manifest.json"))["requirements"]))' > /tmp/integration-requirements.txt
+          python -m pip install -r /tmp/integration-requirements.txt
+      - name: Ruff
+        run: ruff check custom_components tests --output-format github
+      - name: Tests
+        run: python -m pytest -q tests
+
   hassfest:
     name: "Hassfest"
     runs-on: "ubuntu-latest"

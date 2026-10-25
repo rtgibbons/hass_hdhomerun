@@ -7,10 +7,10 @@ import dataclasses
 import logging
 import os.path
 import re
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import date, datetime, timezone
 from enum import StrEnum
-from typing import Any, Callable
+from typing import Any
 
 from homeassistant.components.sensor import DOMAIN as ENTITY_DOMAIN
 from homeassistant.components.sensor import (
@@ -42,9 +42,9 @@ from .const import (
     DOMAIN,
     UPDATE_DOMAIN,
 )
+from .epg import EPGProxy
 from .pyhdhr.const import DiscoverMode
 from .pyhdhr.discover import HDHomeRunDevice
-from .epg import EPGProxy
 
 # endregion
 

@@ -6,7 +6,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 from abc import ABC
-from typing import Callable
+from collections.abc import Callable
 
 from homeassistant.components.button import DOMAIN as ENTITY_DOMAIN
 from homeassistant.components.button import (
@@ -32,9 +32,9 @@ from .const import (
     SIGNAL_HDHOMERUN_CHANNEL_SCANNING_STARTED,
     SIGNAL_HDHOMERUN_CHANNEL_SOURCE_CHANGE,
 )
+from .epg import EPGProxy
 from .pyhdhr.const import DiscoverMode
 from .pyhdhr.discover import HDHomeRunDevice
-from .epg import EPGProxy
 
 # endregion
 

@@ -4,9 +4,9 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import timedelta
-from typing import Any, Callable
+from typing import Any
 
 import homeassistant.helpers.device_registry as dr
 import homeassistant.helpers.entity_registry as er
@@ -40,8 +40,8 @@ from .const import (
     PLATFORMS,
     SIGNAL_HDHOMERUN_CHANNEL_SCAN_FINISHED,
 )
-from .logger import Logger
 from .epg import EPGProxy, M3UView, XMLTVView
+from .logger import Logger
 from .pyhdhr.const import DiscoverMode
 from .pyhdhr.discover import Discover, HDHomeRunDevice
 

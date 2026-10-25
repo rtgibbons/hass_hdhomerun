@@ -5,9 +5,9 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta
-from typing import Any, Callable
+from typing import Any
 
 from homeassistant.components.binary_sensor import DOMAIN as ENTITY_DOMAIN
 from homeassistant.components.binary_sensor import (

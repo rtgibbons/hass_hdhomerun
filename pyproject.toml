@@ -39,3 +39,7 @@ select = [
 
 [tool.ruff.lint.mccabe]
 max-complexity = 25
+
+[tool.ruff.lint.per-file-ignores]
+# Test doubles and fixtures do not need production API docstrings.
+"tests/**" = ["D"]
