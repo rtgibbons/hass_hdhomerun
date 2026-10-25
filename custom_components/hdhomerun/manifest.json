@@ -1,9 +1,9 @@
 {
   "domain": "hdhomerun",
-  "name": "HDHomeRun",
+  "name": "HDHomeRun for Home Assistant",
   "after_dependencies": ["frontend"],
   "codeowners": [
-    "@uvjim"
+    "@rtgibbons"
   ],
   "config_flow": true,
   "dependencies": [
@@ -20,5 +20,5 @@
       "manufacturer": "Silicondust"
     }
   ],
-  "version": "2024.5.1"
+  "version": "2027.0.0"
 }

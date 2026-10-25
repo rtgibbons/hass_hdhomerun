@@ -137,4 +137,4 @@ pyvelop/
 docker-compose.yml
 
 # Amp's generated portal metadata is local to each orb.
-.amp/portals/*
+**/.amp/portals/*

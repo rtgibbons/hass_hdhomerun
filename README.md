@@ -1,379 +1,111 @@
-[![GitHub Release][badge_github_release_version]][github_release_link]
-![GitHub Downloads (latest release)][badge_github_release_downloads]
-[![GitHub Pre-release][badge_github_prerelease_version]][github_prerelease_link]
-![GitHub Downloads (pre-release)][badge_github_prerelease_downloads]
+# HDHomeRun for Home Assistant
 
-# HDHomeRun
+[![Validate](https://github.com/rtgibbons/hass_hdhomerun/actions/workflows/validate.yml/badge.svg?branch=main)](https://github.com/rtgibbons/hass_hdhomerun/actions/workflows/validate.yml?query=branch%3Amain)
+[![Latest release](https://img.shields.io/github/v/release/rtgibbons/hass_hdhomerun)](https://github.com/rtgibbons/hass_hdhomerun/releases)
+[![Home Assistant minimum: 2026.1.0](https://img.shields.io/badge/Home_Assistant-2026.1.0%2B-18BCF2?logo=homeassistant&logoColor=white)](docs/installation.md#requirements)
+[![HACS: Custom](https://img.shields.io/badge/HACS-Custom-41BDF5?logo=homeassistantcommunitystore&logoColor=white)](docs/installation.md#install-through-hacs)
 
-Home Assistant integration for the Silicondust HDHomeRun network tuners.
+Monitor your SiliconDust HDHomeRun network tuners in Home Assistant, with live
+tuner statistics, an optional managed dashboard, and a cached XMLTV guide proxy.
 
-## Installation
+This is the **maintained fork by
+[rtgibbons](https://github.com/rtgibbons)** of
+[uvjim/hass_hdhomerun](https://github.com/uvjim/hass_hdhomerun), with additional
+dashboard, guide, and diagnostic features. The original integration was developed
+by [uvjim](https://github.com/uvjim) and its contributors. This is a custom
+integration, not a Home Assistant app/add-on or an official SiliconDust product.
 
-This fork's GitHub default branch is `develop`; it installs directly from
-source without a GitHub release ZIP. If the default changes back to `main`,
-HACS will request an unavailable release ZIP; the fork owner can restore
-`develop` under **Settings → General → Default branch**. In HACS,
-open **Custom repositories** from the top-right menu, enter
-`https://github.com/rtgibbons/hass_hdhomerun`, select **Integration**, and add
-it. Open **HDHomeRun**, select **Download** and choose `develop` (the default
-branch), then restart Home Assistant and add the HDHomeRun integration under
-**Settings → Devices & services**. HACS does not accept a branch suffix in the
-custom repository URL. Home Assistant 2026.1.0 or newer is required by this
-fork's HACS metadata. If a previous attempt registered the fork while its
-default branch was `main`, refresh HACS repository metadata or remove and
-re-add the failed custom repository before downloading. Do not install the
-upstream integration alongside this fork under the same `hdhomerun` domain.
+> **Release preparation:** the first fork candidate, **2027.0.0**, is
+> **unreleased**. Publication remains blocked on
+> [licensing permissions](docs/releasing.md#licensing-status); release gates have
+> not all passed. The live release badge has no release to display until one is
+> published; it is not a badge for the candidate. HACS installation is via a
+> **custom repository**, not the default HACS list.
 
-Alternatively, add this fork as a custom repository using the button below.
+## Features
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=rtgibbons&repository=hass_hdhomerun&category=Integration)
+- **Receiver and tuner monitoring:** channel, program, signal strength and
+  quality, network rate, available tuners, and firmware information.
+- **Bundled dashboard:** compact tuner cards, guide health, responsive capacity
+  history, and reception warning/error overlays. No separate card installs.
+- **Optional XMLTV and M3U proxy:** cached guide data and a matching channel
+  playlist for compatible players, with freshness and failure diagnostics.
+- **Device controls:** refresh the lineup or guide, scan channels, and restart
+  the receiver. Dashboard maintenance actions ask for confirmation.
+- **English localization:** US and British display text, with Home Assistant
+  language, clock, and sensor-unit preferences respected.
 
-## Description
+Available entities depend on receiver capabilities and discovery method.
 
-This integration can be used to get basic information on each HDHomeRun
-device in the network. The integration can use the UDP broadcast discovery
-protocol, the TCP control protocol and the HTTP API.
+## Quick start
 
-### Optional XMLTV guide proxy (fork-specific)
+Requires **Home Assistant 2026.1.0 or later**,
+[HACS](https://www.hacs.xyz/), and network access to your HDHomeRun receiver.
 
-Enable **XMLTV EPG proxy** in the device's integration options. The default
-refresh is six hours; 3, 6, 12 and 24 hours are available. Refreshes are
-slightly randomized to avoid fixed-time requests to SiliconDust. The first
-background fetch starts within five minutes; use the **Refresh EPG** button
-to fetch immediately. Automatic refreshes also execute the button action, so
-its timestamp shows the last refresh attempt, not just the last manual press.
-Check **EPG status** for the last successful fetch and any errors.
-This feature is off by default and requires the tuner
-to provide `DeviceAuth` in its local `discover.json`, and HA to reach
-`https://api.hdhomerun.com/api/xmltv`. The integration requests gzip and reads
-the current auth immediately before each download; it never stores the auth.
+1. In HACS, open **Custom repositories** and add
+   `https://github.com/rtgibbons/hass_hdhomerun` as an **Integration**.
+2. For current custom-install testing, download **HDHomeRun for Home Assistant**,
+   choosing `main`, then restart Home Assistant. After publication, prefer a
+   published release tag; `develop` is opt-in development only.
+3. Open **Settings → Devices & services → Add integration** and search for
+   **HDHomeRun for Home Assistant**. Enter the receiver's IP address, or leave
+   it blank to discover receivers.
+4. To add the optional dashboard, follow the [dashboard setup](#dashboard) below.
 
-The **EPG status** sensor exposes `url` and `gzip_url` attributes. Set HA's
-internal or external URL to an address UHF can reach (otherwise this attribute
-is only a relative path), then enter that full URL as UHF's XMLTV source. No HA
-bearer token is needed. A valid cache serves even when the tuner or SiliconDust
-is temporarily offline. Until the first successful refresh the URL returns 503;
-disabled/unloaded/rotated URLs return 404. The status sensor shows `empty`,
-`ready`, `refresh_failed`, or `expired`, plus last fetch time, cache age in
-hours, programme/channel counts, earliest start/latest stop, and how many
-lineup channels match an XMLTV channel ID, with up to 20 unmatched examples.
-Feed coverage and lineup can differ from the local device, particularly with
-multiple tuners.
+> **Install only one HDHomeRun custom integration.** This fork and upstream use
+> the same `hdhomerun` domain and cannot be installed side-by-side. Existing users
+> should back up Home Assistant before switching sources.
 
-Two diagnostic timestamp sensors make freshness visible without opening the
-status attributes: **EPG Updated** is the last successful guide fetch, and
-**EPG Coverage End** is the latest programme end time in the cached guide
-(not a guarantee of coverage for every channel). Both are unknown until their
-timestamps are available, use the restored cache after a restart, and retain
-their last good values if a refresh fails. The existing `fetched_at` and
-`coverage_end` status attributes remain available.
-
-**EPG Consecutive Failures** counts failed refresh attempts, including download,
-validation and cache-write failures, and resets to zero after a successful
-refresh. **EPG Last Failure** records the latest failed attempt and is unknown
-until the first failure; a later success does not clear it. Both are diagnostic
-sensors, apply to manual and automatic refreshes, and are saved with the guide
-cache across restarts. If storage is unavailable, failure history still updates
-in memory but cannot be persisted until storage recovers.
-
-The normal URL serves XML and uses HTTP gzip compression when the client
-advertises `Accept-Encoding: gzip`. The `gzip_url` appends `.xml.gz` and always
-serves a gzip file (`application/gzip`, without HTTP `Content-Encoding`). Use
-that option only with players that support gzip XMLTV files. Both formats
-serve the same validated snapshot and share the same access token. Compression
-is prepared off the HA event loop on refresh/restart and reused for requests;
-the gzip snapshot adds memory overhead but is not stored as a second disk copy.
-Upstream downloads already request gzip; actual compression depends on
-SiliconDust's response, and the size limit still applies after decompression.
-
-The sensor's `m3u_url` attribute is a matching M3U playlist that uses the same
-secret token. Each lineup channel's `tvg-id` is set to its XMLTV channel ID, so
-UHF, Channels, Jellyfin or Plex can pair the playlist with the guide without
-manual mapping. Channels are matched by virtual channel number (the XMLTV
-`lcn` or a display name), then by an unambiguous channel name. Unmatched
-channels are still listed, without `tvg-id`. The playlist's `url-tvg` header
-points at the XMLTV URL. Stream URLs are the tuner's own local
-`http://<tuner>:5004/...` addresses, so the client must reach the tuner
-directly. DRM-protected, hidden and disabled channels are omitted. Serving the
-playlist makes no requests. The lineup is read when the integration loads and
-again when a channel scan started from HA finishes; it is never polled, because
-legacy tuners' lineup URL is SiliconDust's cloud API (see
-[upstream issue 119](https://github.com/uvjim/hass_hdhomerun/issues/119)).
-After a scan or channel changes made in another app, press **Refresh Lineup**
-(one request per press; it also works as an automation action). The **Lineup
-Updated** sensor shows when the lineup was last fetched successfully, and the
-button reports an error if the tuner did not return one. The playlist
-returns 503 until a lineup is available; UDP-discovered devices
-do not expose one. XMLTV channel IDs themselves are not rewritten.
-
-Startup and post-scan lineup refreshes also execute **Refresh Lineup**, updating
-its timestamp. Disabling either refresh button does not disable automatic
-fetches; the integration fetches directly when its button is disabled.
-
-With the proxy enabled, each tuner also gets a **Programme** sensor. Its state
-is the title of the programme airing on the tuned channel, from the cached
-guide, and its attributes are `channel_id`, `subtitle`, `episode`,
-`description` (first 500 characters), `start`, `stop`, `next_title` and
-`next_start`. It is unknown when the tuner is idle or the channel has no
-matching guide entry. No extra requests are made: the next 48 hours of
-programmes are indexed in memory at each refresh attempt, including failed
-ones, so the sensor keeps working from the cache while offline.
-
-**Treat the URLs as passwords:** anyone who obtains them can read the guide and
-the lineup. Tokens contain 128 random bits encoded as 22 URL-safe characters.
-On updating from the former 64-character format, the next integration load
-generates a new token; copy the new URLs into your player. Old URLs are not
-supported. Use HTTPS if UHF connects across an untrusted network. The URLs are
-visible to HA users via entity attributes and may appear in HA history,
-reverse-proxy access logs, or UHF configuration. Do not publish them in
-screenshots or issue reports. The **Rotate EPG URL** button immediately
-invalidates the previous XMLTV and M3U URLs; update UHF after rotating.
-Disabling this option invalidates the URLs while disabled but retains the
-private HA storage snapshot/token for re-enable. Removing an entry does not
-automatically delete its stored guide; remove its
-`.storage/hdhomerun/epg_<entry_id>` file manually if retiring the device.
-SiliconDust determines the available guide window (typically two days, or
-longer with eligible DVR service); this proxy cannot add missing guide data.
-
-The guide is validated as XMLTV (`tv`, uniquely identified channels and
-programmes with valid references/times) and capped at 48 MiB decompressed.
-The HTTP download is chunked and stops at the cap; validation parses
-incrementally rather than retaining a full XML tree. The complete validated
-guide is still kept in memory and in HA's private, atomic storage so UHF can
-retrieve it while offline; allow additional memory and disk headroom for
-serialization and an in-progress refresh. An invalid, oversized or failed
-download never replaces the last good cache. The 3.31 MiB two-day guide tested
-with this fork suggests roughly 23 MiB at 14 days for a similar lineup, but
-real guide size depends on channels and programme detail. A larger entitled
-feed may still exceed 48 MiB; check `last_error_type` and the HA logs before
-considering a higher limit or a disk-backed streaming cache.
-
-## Entities Provided
-
-Where applicable the sub-items in the list detail the additional attributes
-available. All entities may not be available to you depending on how the
-device was discovered and what its capabilities are.
-
-### Binary Sensors
-
-| Location | Name | Enabled by default | Additional Information |
-|---|---|:---:|---|
-| Device | Channel Scanning | ✔️ | Percentage progress of the channel scan |
-| Device | All Tuners Busy | ✔️ | On when every tuner is tuned or scanning; useful to warn before a recording or stream would fail |
-
-### Button
-
-| Location | Name | Enabled by default | Comments |
-|---|---|:---:|---|
-| Device | Channel Scan | ✔️ | Requires the source to be selected first (see [here](#select)) |
-| Device | Restart | ✔️ |  |
-| Device | Refresh Lineup | ✔️ | Re-reads the channel lineup once (it is never polled). HTTP-discovered devices only |
-
-### Select
-
-| Location | Name | Enabled by default | Comments |
-|---|---|:---:|---|
-| Device | Channel Sources | ✔️ | Selects the channel source to be used when carrying out a channel scan |
-
-### Sensors
-
-| Location | Name | Enabled by default | Primary value | Additional Information | Comments |
-|---|---|:---:|---|---|---|
-| Device | Channel Count | ✔️ | Number of channels currently tuned on the device | | |
-| Device | Disabled Channels | ✔️ | Number of channels marked as disabled in the channel list | List of channel names | |
-| Device | EPG Updated | ✔️ | When the guide was last fetched successfully | | Only with the XMLTV EPG proxy enabled |
-| Device | EPG Coverage End | ✔️ | Latest programme end time in the cached guide | | Only with the XMLTV EPG proxy enabled; coverage may vary by channel |
-| Device | EPG Consecutive Failures | ✔️ | Failed refresh attempts since the last successful fetch | | Only with the XMLTV EPG proxy enabled |
-| Device | EPG Last Failure | ✔️ | When the latest refresh failure occurred | | Only with the XMLTV EPG proxy enabled; retained after recovery |
-| Device | Favourite Channels | ✔️ | Number of channels marked as favorites in the channel list | List of channel names | |
-| Device | Lineup Updated | ✔️ | When the channel lineup was last fetched successfully | | HTTP-discovered devices only |
-| Device | Tuner Count | ✔️ | Number of tuners the device has | | |
-| Device | Tuners Available | ✔️ | Number of tuners that are idle | | A tuner counts as busy when it reports anything beyond its name (tuned, streaming or scanning) |
-| Tuner | Tuner X | ✔️ | Status of the tuner; `Idle`, `In use`, `Scanning` or the channel being watched | Frequency, signal strength, signal quality, symbol quality, network rate and target IP (as applicable) | X is the tuner number. |
-| Tuner | Frequency | ✔️ | | | |
-| Tuner | Network Rate | ✔️ | | | |
-| Tuner | Signal Quality | ✔️ | | | |
-| Tuner | Symbol Strength | ✔️ | | | |
-| Tuner | Target IP | ✔️ | | |  |
-| Tuner | Programme | ✔️ | Title of the programme airing on the tuned channel | Channel ID, subtitle, episode, description, start, stop, next title and next start | Only with the XMLTV EPG proxy enabled |
-
-### Update
-
-| Location | Name | Enabled by default | Comments |
-|---|---|:---:|---|
-| Device | Firmware | ✔️ | |
-
-# Setup
-
-## `Add Integration` button
-
-If adding the integration by clicking the `Add Integration` button the
-following information will be requested.
-
-![Initial Setup Screen](images/step_user.png)
-
-* `Host`: The IP of an HDHomeRun device on the network. Leave
-  blank to carry out discovery.
-
-  * If you provide a valid IP address, and you will be prompted for
-    a friendly name.
-
-    ![Initial Setup Screen](images/friendly_name.png)
-
-### HTTP/UDP Discovery
-
-This section is only applicable if you did not provide a host in the
-[Add Integration](#add-integration-button) section.
-
-![HTTP/UDP Discovery](images/http_udp_discovery.png)
-
-Click `NEXT` and you will be prompted for a friendly name.
-
-![Initial Setup Screen](images/friendly_name.png)
-
-### Setup Complete
-
-On successful set up the following screen will be seen detailing the device.
-
-![Final Setup Screen](images/setup_finish.png)
-
-## SSDP Discovery
-
-The integration can also detect the HDHomeRun devices on the network using
-SSDP. When found they will look like this on your devices screen.
-
-![Initial Setup Screen](images/ssdp_discovery.png)
-
-Clicking `CONFIGURE` you will be prompted for a friendly name.
-
-![Initial Setup Screen](images/friendly_name.png)
-
-## Configurable Options
-
-It is possible to configure the following options for the integration.
-
-### Timeouts
-
-![Configure Options](images/config_timeouts.png)
-
-* `Scan Interval`: the frequency of updates for the sensors, default `300s`
-* `Tuner status update`: the frequency of updates for tuners, default `10s`
-
-### Options
-
-![Configure Options](images/config_options.png)
-
-* `Channel logo path` - the path to a directory containing channel logos,
-  e.g. `/local/channel_logos`. The default is to have no logo. If previously
-  set, you can clear this option by just entering a space
-
-You can also select which format should be used for the sensor. The
-default is `Channel name`.
-
-_This setting is only effective when a tuner is actively tuned to a channel._
+[Installation and configuration guide](docs/installation.md)
 
 ## Dashboard
 
-The integration includes an optional HDHomeRun dashboard and its cards. There
-are no separate card downloads and no sidebar dashboard is created automatically.
+Add the dashboard once; future integration updates deliver its managed layout
+and cards. Each receiver gets an overview and a maintenance subview. Nothing is
+automatically added to your sidebar, and installation does not show a prompt.
 
-After installing or updating the integration, restart Home Assistant and refresh
-your browser. In Home Assistant 2026.5 or later, open **Settings → Dashboards →
-Add dashboard → Community dashboards → HDHomeRun**. Add it once and choose
-whether to show it in your sidebar.
+![HDHomeRun dashboard with compact tuner cards and 48-hour capacity history](images/dashboard/desktop-48h.png)
 
-On earlier supported Home Assistant versions, create a new blank dashboard and
-replace its raw configuration with:
+*Actual Home Assistant capture with synthetic receiver and history data.*
 
-```yaml
-strategy:
-  type: custom:hdhomerun
-```
+On **Home Assistant 2026.5 or later**, restart after installation, **hard refresh
+your browser**, then open **Settings → Dashboards → Add dashboard → Community
+dashboards → HDHomeRun**. Choose whether to show it in the sidebar.
 
-The managed dashboard discovers the integration's receivers and tuners from
-the entity registry, including renamed entities. Each receiver has its own
-overview and maintenance subview. Missing, disabled, or hidden entities are
-omitted; enable optional diagnostic entities in **Settings → Devices & services**
-if you want to display them. The dashboard does not enable entities itself.
-EPG details appear only when the XMLTV proxy is enabled. Maintenance actions
-require confirmation; opening a dashboard never starts a scan or restarts a device.
+Earlier supported versions can use the
+[blank-dashboard configuration](docs/dashboard.md#add-the-dashboard).
 
-### Updates and customization
+The full-width history chart adapts to 24, 36, or 48 hours of available space,
+with integer tuner counts and translucent reception alerts. Keeping the
+dashboard managed preserves layout updates; **Take control** creates a static,
+user-owned layout instead.
 
-Dashboard layout and card improvements ship with integration updates. After a
-normal HACS update, restart Home Assistant and refresh the browser to load the
-new bundled assets. You do not need to delete and re-add the dashboard. Existing
-user-created dashboards, including dashboards using other cards, are not changed.
-If you **Take control** of the generated dashboard, its layout becomes your own
-static configuration and no longer receives generated layout updates; bundled
-cards still update. Keep the strategy configuration for managed layout updates.
+[Dashboard guide: customization, updates, and alert thresholds](docs/dashboard.md)
 
-Dashboard text follows each viewer's language and clock preferences; `en` uses
-US English and `en-GB` uses British English. Native entity names follow Home
-Assistant's instance language. Entity IDs, unique IDs, and user-assigned names
-are preserved, including legacy spelling when generating new entity IDs.
-Older frontends without strategy regeneration support (including HA 2026.2)
-need a browser reload after changing language to update generated section labels.
+## Documentation
 
-### Capacity history and reception overlays
+| Guide | What you will find |
+| --- | --- |
+| [Installation and configuration](docs/installation.md) | HACS setup, discovery, polling, and receiver options |
+| [Dashboard](docs/dashboard.md) | Add-once workflow, managed vs. custom layouts, history, and localization |
+| [XMLTV guide and M3U playlist](docs/epg.md) | Player setup, cache behavior, diagnostics, and URL security |
+| [Entity reference](docs/entities.md) | Sensors, buttons, controls, and capability requirements |
+| [Troubleshooting](docs/troubleshooting.md) | Browser refresh, missing entities, guide failures, and debug logs |
+| [2027.0.0 release notes (unreleased)](docs/releases/2027.0.0.md) | Candidate features, upgrade steps, rollback, and publication blockers |
+| [Release preparation](docs/releasing.md) | Branch model, validation, licensing research, and publication gates |
 
-The full-width capacity chart uses whole-number tuner counts and shows 24, 36,
-or 48 hours according to the chart's available width. History requires Home
-Assistant's History/Recorder integrations and retention covering that period.
-Unavailable data produces gaps rather than invented readings.
+See the [documentation index](docs/README.md) for a suggested reading order.
 
-Reception warnings and errors are translucent regions behind the capacity lines.
-Select a region (or focus it and press Enter/Space) for readings and timestamps.
-Idle and unknown readings are excluded. Signal quality warns below 70% and
-errors below 50%; symbol quality errors below 100%.
+## Support and upstream
 
-Signal-strength thresholds depend on the source. They are not applied by default,
-because the integration cannot reliably infer the source. To enable them, edit
-the managed dashboard's raw strategy configuration, setting `signal_profile` to
-`antenna` or `cable`:
+Report fork-specific problems in
+[this repository's issue tracker](https://github.com/rtgibbons/hass_hdhomerun/issues).
+Include your Home Assistant version, receiver model, discovery method, and
+redacted diagnostics. **Never publish XMLTV/M3U URLs or receiver authentication
+values**; see [safe troubleshooting](docs/troubleshooting.md#collect-diagnostics).
 
-```yaml
-strategy:
-  type: custom:hdhomerun
-  signal_profile: antenna
-```
-
-For antenna, strength warns below 75% and errors below 50%; for cable, it warns
-below 90% and errors below 80%. These bands follow
-[SiliconDust's signal-color implementation](https://github.com/Silicondust/libhdhomerun/blob/master/hdhomerun_device.c),
-not a guarantee of picture quality. Each shading interval reflects the worst
-observed active-tuner condition. The network-rate bar is a labeled 20 Mbit/s
-display scale (converted to your sensor's selected unit), not a bandwidth limit.
-
-## Troubleshooting
-
-### Debug Logging
-
-Debug logging can be enabled in Home Assistant using the [`logger`
-integration](https://www.home-assistant.io/integrations/logger/).
-
-```yaml
-logger:
-  default: warning
-  logs:
-    custom_components.hdhomerun: debug
-```
-
-### Diagnostics Integration
-
-Starting with Home Assistant 2022.2, a new diagnostics integration can be
-used to provide troubleshooting for integrations.
-
-The highlighted area in the image below shows where the link for downloading
-diagnostics can be found.
-
-![Diagnostics](images/diagnostics.png)
-
-An [example output](examples/diagnostics_output.json) can be found in this repo.
-
-[badge_github_release_version]: https://img.shields.io/github/v/release/rtgibbons/hass_hdhomerun?display_name=release&style=for-the-badge&logoSize=auto
-[badge_github_release_downloads]: https://img.shields.io/github/downloads/rtgibbons/hass_hdhomerun/latest/total?style=for-the-badge&label=downloads%40release
-[badge_github_prerelease_version]: https://img.shields.io/github/v/release/rtgibbons/hass_hdhomerun?include_prereleases&display_name=release&style=for-the-badge&logoSize=auto&label=pre-release
-[badge_github_prerelease_downloads]: https://img.shields.io/github/downloads-pre/rtgibbons/hass_hdhomerun/latest/total?style=for-the-badge&label=downloads%40pre-release
-[github_release_link]: https://github.com/rtgibbons/hass_hdhomerun/releases/latest
-[github_prerelease_link]: https://github.com/rtgibbons/hass_hdhomerun/releases
+This fork is maintained by [rtgibbons](https://github.com/rtgibbons); direct
+fork-specific support requests here rather than to the upstream maintainer.
+The original integration's history and contributors remain available in the
+[upstream repository](https://github.com/uvjim/hass_hdhomerun). Attribution does
+not imply upstream endorsement of this fork.
