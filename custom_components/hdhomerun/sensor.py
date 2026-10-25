@@ -103,6 +103,37 @@ class EPGStatus(SensorEntity):
         return attrs
 
 
+class EPGDiagnostic(SensorEntity):
+    """Expose guide freshness and refresh failure history."""
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(
+        self, entry: ConfigEntry, proxy: EPGProxy, description: SensorEntityDescription
+    ) -> None:
+        """Bind the diagnostic to the entry's guide cache."""
+        self.proxy = proxy
+        self.entity_description = description
+        self._attr_unique_id = f"{entry.unique_id}::epg::{description.key}"
+        self._attr_device_info = {"identifiers": {(DOMAIN, entry.unique_id)}}
+
+    async def async_added_to_hass(self) -> None:
+        """Update alongside the guide status and unsubscribe on removal."""
+        self.proxy.listeners.append(self.async_write_ha_state)
+        self.async_on_remove(lambda: self.proxy.listeners.remove(self.async_write_ha_state))
+
+    @property
+    def native_value(self) -> datetime | int | None:
+        """Return a failure count or a time-zone-aware cached timestamp."""
+        key = self.entity_description.key
+        value = self.proxy.summary.get(key) if key == "coverage_end" else getattr(self.proxy, key)
+        if self.entity_description.device_class == SensorDeviceClass.TIMESTAMP and value is not None:
+            return datetime.fromisoformat(value)
+        return value
+
+
 # region #-- sensor descriptions --#
 @dataclasses.dataclass(frozen=True)
 class AdditionalSensorDescription:
@@ -192,6 +223,35 @@ async def async_setup_entry(
 
     if (proxy := hass.data[DOMAIN][config_entry.entry_id].get(CONF_EPG_PROXY)) is not None:
         sensors.append(EPGStatus(config_entry, proxy))
+        sensors.extend(
+            EPGDiagnostic(config_entry, proxy, description)
+            for description in (
+                SensorEntityDescription(
+                    key="fetched_at",
+                    name="EPG Updated",
+                    translation_key="epg_updated",
+                    device_class=SensorDeviceClass.TIMESTAMP,
+                ),
+                SensorEntityDescription(
+                    key="coverage_end",
+                    name="EPG Coverage End",
+                    translation_key="epg_coverage_end",
+                    device_class=SensorDeviceClass.TIMESTAMP,
+                ),
+                SensorEntityDescription(
+                    key="consecutive_failures",
+                    name="EPG Consecutive Failures",
+                    translation_key="epg_consecutive_failures",
+                    icon="mdi:alert-circle-outline",
+                ),
+                SensorEntityDescription(
+                    key="last_failure",
+                    name="EPG Last Failure",
+                    translation_key="epg_last_failure",
+                    device_class=SensorDeviceClass.TIMESTAMP,
+                ),
+            )
+        )
 
     # region #-- add version sensors if need be --#
     if UPDATE_DOMAIN is None:
