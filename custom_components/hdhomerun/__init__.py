@@ -13,6 +13,7 @@ import homeassistant.helpers.entity_registry as er
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_SCAN_INTERVAL, MAJOR_VERSION, MINOR_VERSION
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
@@ -48,6 +49,8 @@ from .pyhdhr.discover import Discover, HDHomeRunDevice
 # endregion
 
 _LOGGER = logging.getLogger(__name__)
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 # `DeviceInfo["via_device"]` is deprecated from HA Core 2026.8 (removed in 2027.8) in
 # favour of `via_device_id`; older versions reject the new key, so pick per version.
