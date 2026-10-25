@@ -302,6 +302,8 @@ class _DiscoverProtocol(asyncio.DatagramProtocol):
             )
             response = HDHomeRunProtocol.parse_response(data)
             response.get("data", {}).pop(HDHOMERUN_TAG_DEVICE_AUTH_STR, None)
+            # The raw payload duplicates DeviceAuth even after its tag is removed.
+            response.get("data", {}).pop("raw", None)
             _LOGGER.debug("UDP response: %s", response)
             # endregion
 

@@ -47,6 +47,11 @@ async def async_get_config_entry_diagnostics(
     diags["device"]["raw_details"] = getattr(device, "_raw_details", None)
     diags["device"]["processed_datagram"] = getattr(device, "_processed_datagram", None)
 
+    # Raw and numeric protocol fields can duplicate named auth/device values.
     return async_redact_data(
-        diags, to_redact=("device_id", "DeviceID", "device_auth_string", "DeviceAuth")
+        diags,
+        to_redact=(
+            "device_id", "DeviceID", "device_auth_string", "DeviceAuth",
+            "processed_datagram",
+        ),
     )

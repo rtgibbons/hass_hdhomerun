@@ -14,12 +14,6 @@
     "run_as_root": false
   },
   "custom_components": {
-    "linksys_velop": {
-      "version": "2022.10.1",
-      "requirements": [
-        "pyvelop==2022.10.2"
-      ]
-    },
     "hdhomerun": {
       "version": "2022.10.1",
       "requirements": []
@@ -50,7 +44,7 @@
   },
   "data": {
     "device": {
-      "base_url": "http://192.168.1.9:80",
+      "base_url": "http://192.0.2.10:80",
       "channel_scanning": null,
       "channel_sources": null,
       "channels": [],
@@ -64,9 +58,9 @@
       "friendly_name": null,
       "hw_model": "HDHR5-4DT",
       "installed_version": "20220203",
-      "ip": "192.168.1.9",
+      "ip": "192.0.2.10",
       "latest_version": null,
-      "lineup_url": "http://192.168.1.9:80/lineup.json",
+      "lineup_url": "http://192.0.2.10:80/lineup.json",
       "model": "hdhomerun5_dvbt",
       "tuner_count": 4,
       "tuner_status": [
@@ -84,40 +78,7 @@
         }
       ],
       "raw_details": {},
-      "processed_datagram": {
-        "header": 3,
-        "length": 99,
-        "data": {
-          "raw": {
-            "__type": "<class 'bytes'>",
-            "repr": "b\"\\x01\\x04\\x00\\x00\\x00\\x01\\x02\\x04\\x12Q\\x12\\x9f+\\x18bUD8GkD6Leo7JSgIfyXJF2ts*\\x15http://192.168.1.9:80\\x10\\x01\\x04'!http://192.168.1.9:80/lineup.json\""
-          },
-          "1": {
-            "__type": "<class 'bytes'>",
-            "repr": "b'\\x00\\x00\\x00\\x01'"
-          },
-          "2": {
-            "__type": "<class 'bytes'>",
-            "repr": "b'\\x12Q\\x12\\x9f'"
-          },
-          "43": {
-            "__type": "<class 'bytes'>",
-            "repr": "b'bUD8GkD6Leo7JSgIfyXJF2ts'"
-          },
-          "42": {
-            "__type": "<class 'bytes'>",
-            "repr": "b'http://192.168.1.9:80'"
-          },
-          "16": {
-            "__type": "<class 'bytes'>",
-            "repr": "b'\\x04'"
-          },
-          "39": {
-            "__type": "<class 'bytes'>",
-            "repr": "b'http://192.168.1.9:80/lineup.json'"
-          }
-        }
-      }
+      "processed_datagram": "**REDACTED**"
     }
   }
 }
