@@ -1,55 +1,133 @@
-# Amp pull request validation
+# Repository guide for coding agents
 
-## Commit messages and release notes
+## Project and layout
 
-Use Conventional Commit subjects that describe the change, not provisional
-release numbers or preparation milestones. Keep development reasoning in the
-commit body. Release notes are curated in `docs/releases/<version>.md`, not
-generated from commit subjects. Do not rewrite published history to clean up
-old subjects without explicit authorization.
+This is rtgibbons' maintained fork of uvjim/hass_hdhomerun, a Home Assistant
+custom integration for SiliconDust HDHomeRun receivers. It uses asynchronous
+Python for receiver monitoring and an optional XMLTV/M3U proxy, plus bundled
+JavaScript dashboard components. Preserve attribution to uvjim and contributors.
 
-## Validation workflows
+- `custom_components/hdhomerun/`: all installed integration runtime files.
+  `__init__.py` owns setup, coordinators, and entity lifecycle; platform modules
+  expose sensors, buttons, selects, updates, and binary sensors.
+- `pyhdhr/` inside the integration: bundled HTTP/TCP/UDP receiver client.
+- `epg.py`: guide fetching, caching, and playlist/guide HTTP views.
+- `dashboard.py` and `frontend/`: asset registration, dashboard strategy, cards,
+  and frontend localization. Assets are served by HA, not a separate web app.
+- `translations/`: Home Assistant translations (`en` and `en-GB`).
+- `tests/`: Python pytest tests and Node built-in test-runner suites (`.mjs`).
+- `docs/`: installation, dashboard, entities, guide proxy, and release guidance.
+  `examples/` and `images/` contain public examples and documentation assets.
+- `.github/workflows/`: code validation, HACS eligibility, and release packaging.
 
-Amp-created pull requests are the primary contribution path for this repository.
-Automatic `push` and `pull_request` validation has not reliably started for Amp
-changes, while explicit `workflow_dispatch` runs have worked. Do not rely on an
-automatic event or a commit-status rollup to start or discover validation.
+## Local setup
 
-## After opening or updating a pull request
+Use Python 3.13, matching CI, and Node 24 or 26 for dashboard tests. There is no
+`package.json`, npm install step, frontend compilation, or standalone dev server.
+Run commands from the repository root.
 
-When the user has authorized pushing a branch or opening a PR, run the
-non-deploying `Validate` workflow as part of that work:
+```bash
+uv venv --python 3.13 .venv
+uv pip install --python .venv/bin/python -r requirements-test.txt 'defusedxml>=0.7.1'
+```
 
-1. Read the PR's current head branch and full head SHA from GitHub. Confirm the
-   head repository is `rtgibbons/hass_hdhomerun`; do not dispatch a different
-   repository's branch with the same name.
-2. Explicitly dispatch `validate.yml` on that head branch:
-   `gh workflow run validate.yml --repo rtgibbons/hass_hdhomerun --ref <head-branch>`.
-   Do this for the initial PR and every subsequent pushed head, not only after a
-   missing-check notification. This starts validation, not Build & Release.
-3. Inspect the returned workflow run and verify its `headSha` equals the PR's
-   current head SHA. If the branch changed, validation of the older commit does
-   not cover the new head.
-4. Subscribe this thread to CI for the exact head SHA with
-   `workflow_file: "validate.yml"`, in addition to the usual PR comments/reviews
-   subscription. Prefer workflow-specific monitoring: commit rollups have
-   reported no checks even while explicitly dispatched Validate runs were active.
-5. Report the run link and handle failures. A missing run, empty check list,
-   skipped/cancelled job, or successful local test run is not passing GitHub CI.
+`requirements-test.txt` pins HA and test tools. Runtime dependencies are declared
+in `custom_components/hdhomerun/manifest.json`; keep setup instructions aligned
+when those requirements change. `.agents/setup` and `.agents/resume` are Amp orb
+environment scripts, not general local setup commands.
 
-Also dispatch `hacs.yml` on the same head branch and inspect its exact-head
-result. HACS eligibility runs separately from code validation with no ignored
-checks; report its failures independently. Both workflows must pass before
-release packaging or default HACS submission.
+## Checks
 
-## Before merging
+```bash
+.venv/bin/ruff check custom_components tests --output-format github
+.venv/bin/python -m pytest -q tests
+node --test tests/test_dashboard*.mjs
+actionlint
+npx --yes markdownlint-cli README.md AGENTS.md 'docs/**/*.md'
+git diff --check
+```
 
-Merge only when the user has authorized it. Re-read the PR head and verify a
-completed, successful Validate run for that exact SHA, including successful
-`Tests and Ruff` and `Hassfest` jobs. Check any other reported PR checks too; a
-successful Validate run does not override a failure elsewhere.
+Install `actionlint` separately when editing workflows. Markdown lint runs via
+`npx`; it does not require a project npm dependency. CI exercises dashboard tests
+on both Node 24 and 26. To focus Python checks, use a test path or `-k`, for
+example `.venv/bin/python -m pytest -q tests/test_diagnostics.py`.
 
-After an authorized merge, fast-forward the primary checkout's `develop` to
-`origin/develop` without overwriting anyone else's changes. Keep the existing
-automatic workflow triggers for non-Amp contributions; explicit dispatch is the
-primary Amp path, not a claim that GitHub's missing event triggers were repaired.
+With Docker available, validate the integration manifest locally with Hassfest:
+
+```bash
+docker run --rm -v "$PWD:/github/workspace:ro" ghcr.io/home-assistant/hassfest
+```
+
+On ARM hosts, use `--platform linux/amd64` if the image needs emulation.
+HACS eligibility also checks live GitHub metadata; local tests alone cannot
+establish that it passes. Do not bypass validators to remove warnings.
+
+## Development conventions
+
+- Follow existing HA async/coordinator and entity patterns. Do not block HA's
+  event loop or introduce a second polling lifecycle for existing receiver data.
+- Follow `pyproject.toml` for Ruff rules and existing JavaScript conventions.
+  Keep changes scoped; avoid reformatting unrelated inherited code.
+- Preserve the `hdhomerun` domain, existing entity identities, and configuration
+  compatibility unless a migration is explicitly part of the task. The fork and
+  upstream cannot be installed side-by-side under the same domain.
+- Keep runtime files under the integration directory. HACS installs source
+  (`zip_release: false`); a build-only change does not update installed source.
+- Update HA translations and frontend localization when changing visible text.
+  Discover dashboard entities through registries rather than fixed entity IDs.
+- Extend existing tests for observable behavior. Python tests cover HA/server
+  behavior; Node tests cover frontend generation and cards without a full browser.
+  For appearance changes, also render and inspect affected states in disposable
+  HA; Node tests alone do not validate layout. See `docs/dashboard.md`.
+- Test installs and upgrades in disposable HA, not by restarting or modifying a
+  user's live installation without authorization. Restart HA and hard-refresh
+  the browser when checking updated bundled assets.
+
+## Security and public artifacts
+
+Never commit live HA tokens, DeviceAuth values, guide/player bearer URLs, or
+private configuration. Use synthetic data in fixtures, diagnostics examples,
+and screenshots. Diagnostic redaction must cover raw datagrams and numeric
+protocol tags as well as named fields. Removing a value from the working tree
+does not revoke it or remove historical exposure. Preserve upstream notices;
+do not infer a license from HA, HACS, or another repository by the same author.
+
+## Git and pull requests
+
+- `main` is stable/default, `develop` is fork development, and `uvjim` preserves
+  upstream-only history. `origin` is this fork; `upstream` is uvjim's repository.
+  Never merge fork changes into `uvjim` or reset fork branches to upstream.
+- Use a separate worktree for implementation. Preserve unrelated working changes.
+- Use Conventional Commit subjects describing the change, not provisional
+  release versions. Keep useful intent, decisions, and constraints in the body.
+  Do not rewrite published history to clean up old subjects without permission.
+- Prefer pull requests. Push and merge only with authorization. After an
+  authorized merge into `develop`, fast-forward its primary checkout without
+  overwriting unrelated work.
+
+## CI and release gates
+
+`validate.yml` runs Python tests/Ruff, dashboard tests, and Hassfest.
+`hacs.yml` independently runs full HACS eligibility without ignored checks.
+Both run automatically on pushes to and PRs targeting `main` or `develop`, plus
+daily schedules. Use automatic runs; do not manually dispatch duplicates.
+
+After an authorized push or PR update, inspect both workflows for the exact
+head SHA. Subscribe to their results separately and to PR comments/reviews when
+supported. Missing, skipped, cancelled, or older-head runs are not passing CI.
+Before an authorized merge, check all current PR checks, not just the Validate
+badge. That badge reports code validation; **HACS: Custom** is an installation
+channel label, not eligibility certification.
+
+`main.yml` runs on version tags and requires both workflows before packaging.
+The manifest must match the tag (`year.month.revision`, optional `bN`, no `v`),
+the commit must be on `main`, and an authorized root `LICENSE` and curated
+`docs/releases/<tag>.md` must exist. The ZIP contains runtime files at its root
+plus the license. Release bodies use curated notes, not generated commit titles.
+Finalize candidate wording and release-page links before tagging.
+
+Inherited-code licensing remains unresolved; do not add a blanket license or
+ignore that HACS failure. Release preparation is not authorization to tag,
+publish, submit to HACS, or deploy. The workflow creates drafts only; publication
+requires separate authorization. See `docs/releasing.md` for provenance,
+licensing research, release checks, and default HACS submission requirements.

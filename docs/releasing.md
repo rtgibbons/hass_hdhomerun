@@ -121,8 +121,8 @@ fork changes to `main`. Do not reset either fork branch to upstream.
 2. Run Python tests, Ruff, dashboard tests, Markdown lint, workflow lint,
    Hassfest, and a fresh secret scan. Validate packaged frontend assets and
    translations, not only Python files.
-3. Push the candidate branch and explicitly run `validate.yml` and `hacs.yml`,
-   following the repository's `AGENTS.md` validation instructions.
+3. Push the candidate branch and verify the automatic `validate.yml` and
+   `hacs.yml` runs, following the repository's `AGENTS.md` instructions.
 4. Verify successful **Tests and Ruff**, dashboard tests, and **Hassfest** in
    **Validate**, plus **HACS** in **HACS eligibility**, for the exact candidate
    commit. HACS validation must pass with no ignored checks.
@@ -133,8 +133,8 @@ fork changes to `main`. Do not reset either fork branch to upstream.
 
 The intended **Validate** contract covers pushes and pull requests targeting
 both `main` and `develop`, supports manual dispatch, and is reusable by the
-release workflow. For Amp changes, explicitly dispatch it and verify the exact
-head SHA as required by `AGENTS.md`; automatic triggers are not a substitute.
+release workflow. Use automatic runs and verify the exact head SHA as required
+by `AGENTS.md`; do not dispatch duplicate runs after each push.
 
 **HACS eligibility** has the same triggers and is separately reusable. Its
 listing-readiness result does not affect the Validate badge. The static

@@ -5,14 +5,14 @@
 [![Home Assistant minimum: 2026.1.0](https://img.shields.io/badge/Home_Assistant-2026.1.0%2B-18BCF2?logo=homeassistant&logoColor=white)](docs/installation.md#requirements)
 [![HACS: Custom](https://img.shields.io/badge/HACS-Custom-41BDF5?logo=homeassistantcommunitystore&logoColor=white)](docs/installation.md#install-through-hacs)
 
-**Validate** reports tests, lint, and Home Assistant manifest validation.
-**HACS: Custom** identifies the installation channel, not certification.
-[HACS eligibility](https://github.com/rtgibbons/hass_hdhomerun/actions/workflows/hacs.yml)
-is checked separately without ignored checks; both workflows must pass before
-release packaging.
+See what's playing, check reception quality, and keep an eye on available tuners
+without leaving Home Assistant. Connect your SiliconDust HDHomeRun receiver for
+live tuner statistics, a bundled dashboard, and an optional cached XMLTV guide
+and M3U playlist for compatible players.
 
-Monitor your SiliconDust HDHomeRun network tuners in Home Assistant, with live
-tuner statistics, an optional managed dashboard, and a cached XMLTV guide proxy.
+[![Open this repository in HACS on your Home Assistant](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=rtgibbons&repository=hass_hdhomerun&category=Integration)
+
+[Installation guide](docs/installation.md) · [See the dashboard](#dashboard)
 
 This is the **maintained fork by
 [rtgibbons](https://github.com/rtgibbons)** of
@@ -20,13 +20,6 @@ This is the **maintained fork by
 dashboard, guide, and diagnostic features. The original integration was developed
 by [uvjim](https://github.com/uvjim) and its contributors. This is a custom
 integration, not a Home Assistant app/add-on or an official SiliconDust product.
-
-> **Release preparation:** the first fork candidate, **2026.10.1**, is
-> **unreleased**. Publication remains blocked on
-> [licensing permissions](docs/releasing.md#licensing-status); release gates have
-> not all passed. The live release badge has no release to display until one is
-> published; it is not a badge for the candidate. HACS installation is via a
-> **custom repository**, not the default HACS list.
 
 ## Features
 
@@ -47,6 +40,10 @@ Available entities depend on receiver capabilities and discovery method.
 
 Requires **Home Assistant 2026.1.0 or later**,
 [HACS](https://www.hacs.xyz/), and network access to your HDHomeRun receiver.
+
+> [!NOTE]
+> Custom-install testing is available from `main`; **2026.10.1 is not yet
+> released**. Publication awaits [licensing permissions](docs/releasing.md#licensing-status).
 
 1. In HACS, open **Custom repositories** and add
    `https://github.com/rtgibbons/hass_hdhomerun` as an **Integration**.
@@ -101,6 +98,12 @@ user-owned layout instead.
 | [Release preparation](docs/releasing.md) | Branch model, validation, licensing research, and publication gates |
 
 See the [documentation index](docs/README.md) for a suggested reading order.
+
+The **Validate** badge covers tests, lint, and Home Assistant manifest validation.
+**HACS: Custom** describes the installation channel, not certification.
+[HACS eligibility](https://github.com/rtgibbons/hass_hdhomerun/actions/workflows/hacs.yml)
+is checked separately; both workflows must pass before release packaging. The
+release badge will show a version once the first release is published.
 
 ## Support and upstream
 
