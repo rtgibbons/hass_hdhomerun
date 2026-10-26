@@ -12,13 +12,11 @@ only if your players need it.
 | [XMLTV guide and M3U playlist](epg.md) | Guide refreshes, player URLs, cache behavior, and security |
 | [Entity reference](entities.md) | Available entities and their meanings |
 | [Troubleshooting](troubleshooting.md) | Common problems, diagnostics, and logging |
-| [2026.10.1 release notes (unreleased)](releases/2026.10.1.md) | First fork candidate, upgrade guidance, rollback, and outstanding gates |
+| [2026.10.1 release notes](releases/2026.10.1.md) | First stable fork snapshot, upgrade guidance, and rollback |
 | [Release and HACS submission](releasing.md) | Maintainer checklist, licensing, validation, and publishing gates |
 
-The first fork candidate is **unreleased**, with publication blocked on
-[licensing permissions](releasing.md#licensing-status). Use `main` only for
-current custom-install testing; `develop` is opt-in development. After
-publication, prefer published release tags through the HACS custom repository.
+Install a published stable release through the HACS custom repository.
+`develop` is opt-in development, not the stable installation channel.
 
 The [screenshot collection](../images/dashboard/README.md) includes desktop,
 mobile, maintenance, and British English views, with capture provenance.

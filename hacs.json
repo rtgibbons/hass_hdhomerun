@@ -2,5 +2,6 @@
   "homeassistant": "2026.1.0",
   "name": "HDHomeRun for Home Assistant",
   "render_readme": true,
-  "zip_release": false
+  "zip_release": true,
+  "filename": "hdhomerun.zip"
 }

@@ -5,9 +5,9 @@
 This guide covers releases of this fork and submission to HACS's default list.
 A draft GitHub release does not satisfy the default-listing release requirement.
 
-## Current preparation status
+## Release policy
 
-**2026.10.1 is the first fork candidate and is unreleased.** The latest upstream
+**2026.10.1 is the first fork release for custom installation.** The latest upstream
 release verified on October 25, 2026 was
 [2026.9.1](https://github.com/uvjim/hass_hdhomerun/releases/tag/2026.9.1).
 The fork follows upstream's `year.month.revision` versioning, with its own
@@ -16,13 +16,13 @@ the same version does not conflict with this fork's release. Optional beta tags
 use `year.month.revisionbN`, such as `2026.10.1b1`, and must exactly match the
 source manifest. Keep future fork versions increasing.
 
-This is preparation only: **do not create or push a release tag now**. Licensing
-is unresolved, and not all release gates have passed. The
-[candidate release notes](releases/2026.10.1.md) are a draft, not evidence of a
-published release. The README's live GitHub release badge legitimately has no
-release to display until publication; do not replace it with a fake version.
+The owner has chosen versioned custom-install snapshots while licensing remains
+unresolved. Code validation gates packaging; HACS default-list eligibility is
+checked independently and is not a custom-release gate. This is not a license
+grant or a claim that permissions have been resolved. See the
+[release notes](releases/2026.10.1.md).
 
-## Resolve publication blockers first
+## Release review and default-list requirements
 
 - Establish redistribution/license permissions for upstream code and vendored
   dependencies. Preserve existing notices. If no license grant can be found,
@@ -70,11 +70,11 @@ There is no automatic Home Assistant or HACS fallback license:
   inherit a repository license when a license notice exists; these terms do not
   supply a missing open-source license.
 
-Before release, obtain a written grant covering the inherited code and relevant
+For resolution, obtain a written grant covering the inherited code and relevant
 contributions, and check vendored code separately. Apache-2.0 is a reasonable
 license to request, not one this fork can assign to others' code without
 authorization. Attribution and an unanswered permission request do not resolve
-this blocker.
+the licensing question or the default-list blocker.
 
 ## Repository metadata
 
@@ -124,9 +124,10 @@ fork changes to `main`. Do not reset either fork branch to upstream.
 3. Push the candidate branch and verify the automatic `validate.yml` and
    `hacs.yml` runs, following the repository's `AGENTS.md` instructions.
 4. Verify successful **Tests and Ruff**, dashboard tests, and **Hassfest** in
-   **Validate**, plus **HACS** in **HACS eligibility**, for the exact candidate
-   commit. HACS validation must pass with no ignored checks.
-   Local checks do not replace these GitHub results.
+   **Validate** for the exact candidate commit. Inspect **HACS eligibility**
+   separately and report failures without ignores. It must pass before default
+   HACS submission, but does not gate custom releases. Local checks do not
+   replace these GitHub results.
 5. Verify installation/update in a disposable HA instance, including a hard
    browser refresh, dashboard addition, and preservation of existing entities.
    Do not use production maintenance actions for validation.
@@ -142,23 +143,20 @@ listing-readiness result does not affect the Validate badge. The static
 
 ## Prepare the release
 
-The repository uses `zip_release: false`: HACS consumes source from the selected
-branch or release tag. The attached `hdhomerun.zip` is a manual-install artifact,
-not HACS's source of truth. Its manifest must match the tagged source version.
+The repository uses `zip_release: true` and `filename: "hdhomerun.zip"`: HACS
+downloads the attached release asset. The same ZIP supports manual installation.
+Its manifest and runtime files must match the tagged source exactly.
 
 The release workflow's required contract is:
 
 - Accept numeric `x.y.z` and `x.y.zbN` tags, with no calendar-month restriction.
 - Verify that the tagged source manifest equals the tag exactly and that the
   tagged commit is on `main`; do not rewrite the manifest only inside the ZIP.
-- Run both reusable workflows, **Validate** and **HACS eligibility**,
-  successfully before building. A failure or skipped validation must prevent
-  packaging.
-- Require the authorized root `LICENSE` file; missing licensing blocks release
-  preparation rather than silently producing an unlicensed artifact.
+- Run reusable **Validate** successfully before building. A failure or skipped
+  validation must prevent packaging. Keep **HACS eligibility** independent.
 - Package integration files at the root of `hdhomerun.zip`, excluding portal
   metadata, Python bytecode, and cache files. Include the root license in the
-  manual-install ZIP and preserve any additional required third-party notices.
+  ZIP if present and preserve any additional required third-party notices.
 - Create a **draft only**, marking beta releases as prereleases. Publication is
   a separate, explicitly authorized decision after all gates pass.
 - Require `docs/releases/<tag>.md` and use it as the draft release body instead
@@ -167,13 +165,15 @@ The release workflow's required contract is:
 
 Confirm these workflow gates on the final candidate; documenting the contract
 does not establish that they have run or passed. Do not push a tag just to test
-the workflow: that creates shared release state. No tag or release is part of
-the current preparation work.
+the workflow: that creates shared release state. Tags and publication require
+explicit authorization.
 
 Before publication, review release notes for minimum HA version,
 fork attribution, dashboard setup, optional EPG behavior, breaking changes, and
 upgrade/rollback instructions. Verify both the tagged source and ZIP contents.
-Publish a full GitHub release only after blockers and validation are resolved.
+Publish an authorized custom release only after code validation and ZIP checks
+pass. A draft is not downloadable through normal HACS release installation;
+publish it with its ZIP asset before directing users to that version.
 
 ## Submit for default HACS inclusion
 

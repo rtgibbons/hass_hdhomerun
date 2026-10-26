@@ -41,15 +41,10 @@ Available entities depend on receiver capabilities and discovery method.
 Requires **Home Assistant 2026.1.0 or later**,
 [HACS](https://www.hacs.xyz/), and network access to your HDHomeRun receiver.
 
-> [!NOTE]
-> Custom-install testing is available from `main`; **2026.10.1 is not yet
-> released**. Publication awaits [licensing permissions](docs/releasing.md#licensing-status).
-
 1. In HACS, open **Custom repositories** and add
    `https://github.com/rtgibbons/hass_hdhomerun` as an **Integration**.
-2. For current custom-install testing, download **HDHomeRun for Home Assistant**,
-   choosing `main`, then restart Home Assistant. After publication, prefer a
-   published release tag; `develop` is opt-in development only.
+2. Download **HDHomeRun for Home Assistant**, choosing the latest stable release,
+   then restart Home Assistant.
 3. Open **Settings → Devices & services → Add integration** and search for
    **HDHomeRun for Home Assistant**. Enter the receiver's IP address, or leave
    it blank to discover receivers.
@@ -94,7 +89,7 @@ user-owned layout instead.
 | [XMLTV guide and M3U playlist](docs/epg.md) | Player setup, cache behavior, diagnostics, and URL security |
 | [Entity reference](docs/entities.md) | Sensors, buttons, controls, and capability requirements |
 | [Troubleshooting](docs/troubleshooting.md) | Browser refresh, missing entities, guide failures, and debug logs |
-| [2026.10.1 release notes (unreleased)](docs/releases/2026.10.1.md) | Candidate features, upgrade steps, rollback, and publication blockers |
+| [2026.10.1 release notes](docs/releases/2026.10.1.md) | Release highlights, upgrade steps, and rollback |
 | [Release preparation](docs/releasing.md) | Branch model, validation, licensing research, and publication gates |
 
 See the [documentation index](docs/README.md) for a suggested reading order.
@@ -102,8 +97,7 @@ See the [documentation index](docs/README.md) for a suggested reading order.
 The **Validate** badge covers tests, lint, and Home Assistant manifest validation.
 **HACS: Custom** describes the installation channel, not certification.
 [HACS eligibility](https://github.com/rtgibbons/hass_hdhomerun/actions/workflows/hacs.yml)
-is checked separately; both workflows must pass before release packaging. The
-release badge will show a version once the first release is published.
+is checked separately for default-list submission, not custom-install releases.
 
 ## Support and upstream
 

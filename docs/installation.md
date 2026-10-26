@@ -17,43 +17,40 @@ install one, not both. Back up Home Assistant before switching sources.
 
 ## Install through HACS
 
-The first fork candidate, **2026.10.1**, is **unreleased**. Publication is still
-blocked on [licensing permissions](releasing.md#licensing-status). The steps
-below describe custom-install testing, not a published or default-listed release.
+Install this fork through a HACS custom repository; it is not in the default
+HACS list. Choose a published stable release for a versioned installation.
 
 1. Open HACS and choose **Custom repositories** from the top-right menu.
 2. Enter `https://github.com/rtgibbons/hass_hdhomerun`, select **Integration**,
    and add it. Do not append a branch name to the repository URL.
-3. Open **HDHomeRun for Home Assistant**, select **Download**, and choose
-   `main` for current testing. Choose `develop` only if you explicitly want
-   ongoing development changes.
+3. Open **HDHomeRun for Home Assistant**, select **Download**, and choose the
+   latest stable release, starting with **2026.10.1**.
 4. Restart Home Assistant.
 5. Add the receiver as described below, then optionally
    [add the dashboard](dashboard.md#add-the-dashboard).
 
 [![Open this repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=rtgibbons&repository=hass_hdhomerun&category=Integration)
 
-After publication, normal HACS installs and updates use published release tags.
-The stable/default fork branch is `main`; branch selection is currently useful
-for testing before a release exists. The `uvjim` branch preserves upstream-only
-history and is not the fork installation target.
+Normal HACS installs and updates use published releases. The stable/default fork
+branch is `main`; `develop` is ongoing development. The `uvjim` branch preserves
+upstream-only history and is not the fork installation target.
 
-With `zip_release: false`, HACS downloads repository source at the selected
-release tag or branch, not an attached `hdhomerun.zip`. If HACS requests an
+With `zip_release: true`, HACS downloads the selected release's attached
+`hdhomerun.zip`. If HACS requests an
 unavailable release ZIP, refresh its repository metadata or remove and re-add
 the failed custom repository. A HACS Custom badge does not mean this fork is
 included in HACS's default list.
 
 ## Manual installation
 
-Once a release is published, its attached `hdhomerun.zip` is an alternative to
+Download `hdhomerun.zip` from the chosen GitHub release as an alternative to
 HACS. It contains integration files such as `manifest.json` at the **ZIP root**,
 not a containing `custom_components/hdhomerun` directory. Extract those files
 into `<config>/custom_components/hdhomerun/`, then restart Home Assistant. Do not
 extract them directly into `<config>/custom_components/`.
 
-Before publication there is no fork release ZIP to download. For manual source
-testing, copy only the repository's `custom_components/hdhomerun/` directory to
+For manual source testing, copy only the repository's
+`custom_components/hdhomerun/` directory to
 the same location under your Home Assistant configuration. Do not mix files
 from different versions or install this fork alongside upstream.
 
@@ -117,7 +114,7 @@ Older setup screenshots may not show recently added guide options.
 
 ## Update
 
-Back up Home Assistant before updating. After publication, select the desired
+Back up Home Assistant before updating. Select the desired
 published release in HACS; branch testers should confirm their selected branch
 before downloading. Download the update, restart Home Assistant, and refresh
 your browser.
@@ -146,4 +143,4 @@ have [taken control of](dashboard.md#updates-and-customization) stays user-owned
    and player settings as appropriate.
 
 Never install upstream and this fork side-by-side: both use `hdhomerun`.
-See the [unreleased candidate notes](releases/2026.10.1.md) before switching.
+See the [release notes](releases/2026.10.1.md) before switching.

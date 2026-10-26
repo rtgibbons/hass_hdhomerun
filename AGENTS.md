@@ -71,8 +71,8 @@ establish that it passes. Do not bypass validators to remove warnings.
 - Preserve the `hdhomerun` domain, existing entity identities, and configuration
   compatibility unless a migration is explicitly part of the task. The fork and
   upstream cannot be installed side-by-side under the same domain.
-- Keep runtime files under the integration directory. HACS installs source
-  (`zip_release: false`); a build-only change does not update installed source.
+- Keep runtime files under the integration directory. HACS installs the release
+  asset `hdhomerun.zip` (`zip_release: true`), with runtime files at the ZIP root.
 - Update HA translations and frontend localization when changing visible text.
   Discover dashboard entities through registries rather than fixed entity IDs.
 - Extend existing tests for observable behavior. Python tests cover HA/server
@@ -119,15 +119,17 @@ Before an authorized merge, check all current PR checks, not just the Validate
 badge. That badge reports code validation; **HACS: Custom** is an installation
 channel label, not eligibility certification.
 
-`main.yml` runs on version tags and requires both workflows before packaging.
+`main.yml` runs on version tags and requires Validate before packaging.
 The manifest must match the tag (`year.month.revision`, optional `bN`, no `v`),
-the commit must be on `main`, and an authorized root `LICENSE` and curated
-`docs/releases/<tag>.md` must exist. The ZIP contains runtime files at its root
-plus the license. Release bodies use curated notes, not generated commit titles.
+the commit must be on `main`, and curated `docs/releases/<tag>.md` must exist.
+The ZIP contains runtime files at its root and the root license if present.
+Release bodies use curated notes, not generated commit titles.
 Finalize candidate wording and release-page links before tagging.
 
 Inherited-code licensing remains unresolved; do not add a blanket license or
-ignore that HACS failure. Release preparation is not authorization to tag,
+ignore that HACS failure. The owner has chosen versioned custom-install releases
+independently of HACS default-list eligibility; this does not resolve licensing.
+Release preparation is not authorization to tag,
 publish, submit to HACS, or deploy. The workflow creates drafts only; publication
 requires separate authorization. See `docs/releasing.md` for provenance,
 licensing research, release checks, and default HACS submission requirements.

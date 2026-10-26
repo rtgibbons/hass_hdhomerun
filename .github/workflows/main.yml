@@ -19,13 +19,9 @@ jobs:
     name: Validate release
     uses: ./.github/workflows/validate.yml
 
-  hacs:
-    name: Check HACS eligibility
-    uses: ./.github/workflows/hacs.yml
-
   build:
     name: Build
-    needs: [validate, hacs]
+    needs: validate
     runs-on: ubuntu-latest
     outputs:
       prerelease: ${{ steps.version.outputs.prerelease }}
@@ -35,7 +31,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      # HACS installs tagged source with zip_release=false, not this ZIP.
+      # HACS and manual installs use the same versioned release ZIP.
       - name: Verify release source
         id: version
         env:
@@ -55,8 +51,6 @@ jobs:
               raise SystemExit("Use an x.y.z or x.y.zbN tag without a v prefix")
           if version != tag:
               raise SystemExit(f"Manifest version {version!r} must match release tag {tag!r}")
-          if not Path("LICENSE").is_file():
-              raise SystemExit("Release blocked: resolve inherited-code licensing and add the authorized LICENSE")
           if not (Path("docs/releases") / f"{tag}.md").is_file():
               raise SystemExit(f"Release blocked: missing curated notes for {tag}")
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
@@ -76,7 +70,9 @@ jobs:
         run: |
           git archive --format=zip --output="$ARTIFACT_PATH/$PACKAGE_NAME.zip" \
             "$GITHUB_SHA:custom_components/$PACKAGE_NAME"
-          zip -j "$ARTIFACT_PATH/$PACKAGE_NAME.zip" LICENSE
+          if [ -f LICENSE ]; then
+            zip -j "$ARTIFACT_PATH/$PACKAGE_NAME.zip" LICENSE
+          fi
 
       - name: Upload the artifacts
         uses: actions/upload-artifact@v4
