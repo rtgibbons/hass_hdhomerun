@@ -19,9 +19,13 @@ jobs:
     name: Validate release
     uses: ./.github/workflows/validate.yml
 
+  hacs:
+    name: Check HACS eligibility
+    uses: ./.github/workflows/hacs.yml
+
   build:
     name: Build
-    needs: validate
+    needs: [validate, hacs]
     runs-on: ubuntu-latest
     outputs:
       prerelease: ${{ steps.version.outputs.prerelease }}
@@ -53,6 +57,8 @@ jobs:
               raise SystemExit(f"Manifest version {version!r} must match release tag {tag!r}")
           if not Path("LICENSE").is_file():
               raise SystemExit("Release blocked: resolve inherited-code licensing and add the authorized LICENSE")
+          if not (Path("docs/releases") / f"{tag}.md").is_file():
+              raise SystemExit(f"Release blocked: missing curated notes for {tag}")
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
               output.write(f"prerelease={'true' if 'b' in tag else 'false'}\n")
           PY
@@ -88,6 +94,9 @@ jobs:
       contents: write
 
     steps:
+      - name: Checkout release notes
+        uses: actions/checkout@v7
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -101,5 +110,6 @@ jobs:
           files: |
             ${{ env.ARTIFACT_PATH }}/${{ env.PACKAGE_NAME }}.zip
           fail_on_unmatched_files: true
-          generate_release_notes: true
+          body_path: docs/releases/${{ github.ref_name }}.md
+          generate_release_notes: false
           prerelease: ${{ needs.build.outputs.prerelease }}

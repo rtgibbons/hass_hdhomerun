@@ -1,5 +1,15 @@
 # Amp pull request validation
 
+## Commit messages and release notes
+
+Use Conventional Commit subjects that describe the change, not provisional
+release numbers or preparation milestones. Keep development reasoning in the
+commit body. Release notes are curated in `docs/releases/<version>.md`, not
+generated from commit subjects. Do not rewrite published history to clean up
+old subjects without explicit authorization.
+
+## Validation workflows
+
 Amp-created pull requests are the primary contribution path for this repository.
 Automatic `push` and `pull_request` validation has not reliably started for Amp
 changes, while explicit `workflow_dispatch` runs have worked. Do not rely on an
@@ -26,6 +36,11 @@ non-deploying `Validate` workflow as part of that work:
    reported no checks even while explicitly dispatched Validate runs were active.
 5. Report the run link and handle failures. A missing run, empty check list,
    skipped/cancelled job, or successful local test run is not passing GitHub CI.
+
+Also dispatch `hacs.yml` on the same head branch and inspect its exact-head
+result. HACS eligibility runs separately from code validation with no ignored
+checks; report its failures independently. Both workflows must pass before
+release packaging or default HACS submission.
 
 ## Before merging
 

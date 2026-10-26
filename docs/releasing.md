@@ -121,10 +121,11 @@ fork changes to `main`. Do not reset either fork branch to upstream.
 2. Run Python tests, Ruff, dashboard tests, Markdown lint, workflow lint,
    Hassfest, and a fresh secret scan. Validate packaged frontend assets and
    translations, not only Python files.
-3. Push the candidate branch and explicitly run `validate.yml`, following the
-   repository's `AGENTS.md` validation instructions.
-4. Verify successful **Tests and Ruff**, **Hassfest**, and **HACS** jobs for the
-   exact candidate commit. HACS validation must pass with no ignored checks.
+3. Push the candidate branch and explicitly run `validate.yml` and `hacs.yml`,
+   following the repository's `AGENTS.md` validation instructions.
+4. Verify successful **Tests and Ruff**, dashboard tests, and **Hassfest** in
+   **Validate**, plus **HACS** in **HACS eligibility**, for the exact candidate
+   commit. HACS validation must pass with no ignored checks.
    Local checks do not replace these GitHub results.
 5. Verify installation/update in a disposable HA instance, including a hard
    browser refresh, dashboard addition, and preservation of existing entities.
@@ -134,6 +135,10 @@ The intended **Validate** contract covers pushes and pull requests targeting
 both `main` and `develop`, supports manual dispatch, and is reusable by the
 release workflow. For Amp changes, explicitly dispatch it and verify the exact
 head SHA as required by `AGENTS.md`; automatic triggers are not a substitute.
+
+**HACS eligibility** has the same triggers and is separately reusable. Its
+listing-readiness result does not affect the Validate badge. The static
+**HACS: Custom** badge describes installation, not a passing eligibility check.
 
 ## Prepare the release
 
@@ -146,8 +151,9 @@ The release workflow's required contract is:
 - Accept numeric `x.y.z` and `x.y.zbN` tags, with no calendar-month restriction.
 - Verify that the tagged source manifest equals the tag exactly and that the
   tagged commit is on `main`; do not rewrite the manifest only inside the ZIP.
-- Run the full reusable **Validate** workflow, including HACS, successfully
-  before building. A failure or skipped validation must prevent packaging.
+- Run both reusable workflows, **Validate** and **HACS eligibility**,
+  successfully before building. A failure or skipped validation must prevent
+  packaging.
 - Require the authorized root `LICENSE` file; missing licensing blocks release
   preparation rather than silently producing an unlicensed artifact.
 - Package integration files at the root of `hdhomerun.zip`, excluding portal
@@ -155,6 +161,9 @@ The release workflow's required contract is:
   manual-install ZIP and preserve any additional required third-party notices.
 - Create a **draft only**, marking beta releases as prereleases. Publication is
   a separate, explicitly authorized decision after all gates pass.
+- Require `docs/releases/<tag>.md` and use it as the draft release body instead
+  of generating notes from commit or pull-request titles. Before tagging,
+  finalize its unreleased wording and use links that work on GitHub releases.
 
 Confirm these workflow gates on the final candidate; documenting the contract
 does not establish that they have run or passed. Do not push a tag just to test

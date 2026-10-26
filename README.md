@@ -5,6 +5,12 @@
 [![Home Assistant minimum: 2026.1.0](https://img.shields.io/badge/Home_Assistant-2026.1.0%2B-18BCF2?logo=homeassistant&logoColor=white)](docs/installation.md#requirements)
 [![HACS: Custom](https://img.shields.io/badge/HACS-Custom-41BDF5?logo=homeassistantcommunitystore&logoColor=white)](docs/installation.md#install-through-hacs)
 
+**Validate** reports tests, lint, and Home Assistant manifest validation.
+**HACS: Custom** identifies the installation channel, not certification.
+[HACS eligibility](https://github.com/rtgibbons/hass_hdhomerun/actions/workflows/hacs.yml)
+is checked separately without ignored checks; both workflows must pass before
+release packaging.
+
 Monitor your SiliconDust HDHomeRun network tuners in Home Assistant, with live
 tuner statistics, an optional managed dashboard, and a cached XMLTV guide proxy.
 
