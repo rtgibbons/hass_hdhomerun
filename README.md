@@ -15,7 +15,7 @@ dashboard, guide, and diagnostic features. The original integration was develope
 by [uvjim](https://github.com/uvjim) and its contributors. This is a custom
 integration, not a Home Assistant app/add-on or an official SiliconDust product.
 
-> **Release preparation:** the first fork candidate, **2027.0.0**, is
+> **Release preparation:** the first fork candidate, **2026.10.1**, is
 > **unreleased**. Publication remains blocked on
 > [licensing permissions](docs/releasing.md#licensing-status); release gates have
 > not all passed. The live release badge has no release to display until one is
@@ -91,7 +91,7 @@ user-owned layout instead.
 | [XMLTV guide and M3U playlist](docs/epg.md) | Player setup, cache behavior, diagnostics, and URL security |
 | [Entity reference](docs/entities.md) | Sensors, buttons, controls, and capability requirements |
 | [Troubleshooting](docs/troubleshooting.md) | Browser refresh, missing entities, guide failures, and debug logs |
-| [2027.0.0 release notes (unreleased)](docs/releases/2027.0.0.md) | Candidate features, upgrade steps, rollback, and publication blockers |
+| [2026.10.1 release notes (unreleased)](docs/releases/2026.10.1.md) | Candidate features, upgrade steps, rollback, and publication blockers |
 | [Release preparation](docs/releasing.md) | Branch model, validation, licensing research, and publication gates |
 
 See the [documentation index](docs/README.md) for a suggested reading order.

@@ -17,7 +17,7 @@ install one, not both. Back up Home Assistant before switching sources.
 
 ## Install through HACS
 
-The first fork candidate, **2027.0.0**, is **unreleased**. Publication is still
+The first fork candidate, **2026.10.1**, is **unreleased**. Publication is still
 blocked on [licensing permissions](releasing.md#licensing-status). The steps
 below describe custom-install testing, not a published or default-listed release.
 
@@ -146,4 +146,4 @@ have [taken control of](dashboard.md#updates-and-customization) stays user-owned
    and player settings as appropriate.
 
 Never install upstream and this fork side-by-side: both use `hdhomerun`.
-See the [unreleased candidate notes](releases/2027.0.0.md) before switching.
+See the [unreleased candidate notes](releases/2026.10.1.md) before switching.

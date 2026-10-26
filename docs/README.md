@@ -12,7 +12,7 @@ only if your players need it.
 | [XMLTV guide and M3U playlist](epg.md) | Guide refreshes, player URLs, cache behavior, and security |
 | [Entity reference](entities.md) | Available entities and their meanings |
 | [Troubleshooting](troubleshooting.md) | Common problems, diagnostics, and logging |
-| [2027.0.0 release notes (unreleased)](releases/2027.0.0.md) | First fork candidate, upgrade guidance, rollback, and outstanding gates |
+| [2026.10.1 release notes (unreleased)](releases/2026.10.1.md) | First fork candidate, upgrade guidance, rollback, and outstanding gates |
 | [Release and HACS submission](releasing.md) | Maintainer checklist, licensing, validation, and publishing gates |
 
 The first fork candidate is **unreleased**, with publication blocked on

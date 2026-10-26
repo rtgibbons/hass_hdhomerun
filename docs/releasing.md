@@ -7,17 +7,18 @@ A draft GitHub release does not satisfy the default-listing release requirement.
 
 ## Current preparation status
 
-**2027.0.0 is the first fork candidate and is unreleased.** The latest upstream
+**2026.10.1 is the first fork candidate and is unreleased.** The latest upstream
 release verified on October 25, 2026 was
 [2026.9.1](https://github.com/uvjim/hass_hdhomerun/releases/tag/2026.9.1).
-The fork uses normal numeric `x.y.z` versioning, not a calendar-release rule;
-`2027.0.0` is a deliberate major bump beyond upstream's version sequence.
-Subsequent versions follow major/minor/patch intent. Optional beta tags use
-`x.y.zbN`, such as `2027.0.0b1`, and must exactly match the source manifest.
+The fork follows upstream's `year.month.revision` versioning, with its own
+release sequence. HACS tracks releases per repository; an upstream release with
+the same version does not conflict with this fork's release. Optional beta tags
+use `year.month.revisionbN`, such as `2026.10.1b1`, and must exactly match the
+source manifest. Keep future fork versions increasing.
 
 This is preparation only: **do not create or push a release tag now**. Licensing
 is unresolved, and not all release gates have passed. The
-[candidate release notes](releases/2027.0.0.md) are a draft, not evidence of a
+[candidate release notes](releases/2026.10.1.md) are a draft, not evidence of a
 published release. The README's live GitHub release badge legitimately has no
 release to display until publication; do not replace it with a fake version.
 
@@ -113,8 +114,8 @@ fork changes to `main`. Do not reset either fork branch to upstream.
 
 ## Validate the exact release candidate
 
-1. Prepare `2027.0.0` in `custom_components/hdhomerun/manifest.json` in source.
-   For later releases, choose the next numeric version. The version must be
+1. Prepare `2026.10.1` in `custom_components/hdhomerun/manifest.json` in source.
+   For later releases, choose the next calendar version. The version must be
    committed on `main` before any matching tag is authorized. Do not retain an
    upstream version for the fork's first release.
 2. Run Python tests, Ruff, dashboard tests, Markdown lint, workflow lint,
