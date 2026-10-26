@@ -18,8 +18,8 @@ jobs:
     name: Tests and Ruff
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
       - name: Install test dependencies
@@ -31,9 +31,20 @@ jobs:
         run: ruff check custom_components tests --output-format github
       - name: Tests
         run: python -m pytest -q tests
-      - uses: actions/setup-node@v4
+
+  dashboard:
+    name: Dashboard (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ["24", "26"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: ${{ matrix.node }}
+      - name: Node version
+        run: node --version
       - name: Dashboard tests
         run: node --test tests/test_dashboard*.mjs
 
@@ -41,14 +52,14 @@ jobs:
     name: "Hassfest"
     runs-on: "ubuntu-latest"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: home-assistant/actions/hassfest@master
 
   hacs:
     name: HACS
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: hacs/action@main
         env:
           REPOSITORY_REF: ${{ github.event.pull_request.head.sha || github.sha }}
