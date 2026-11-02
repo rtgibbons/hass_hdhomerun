@@ -22,12 +22,13 @@ JavaScript dashboard components. Preserve attribution to uvjim and contributors.
 
 ## Local setup
 
-Use Python 3.13, matching CI, and Node 24 or 26 for dashboard tests. There is no
-`package.json`, npm install step, frontend compilation, or standalone dev server.
-Run commands from the repository root.
+Use Python 3.14 for HA 2026.11 beta compatibility, and Node 24 or 26 for dashboard
+tests. CI also tests Python 3.13 with HA 2026.2.3 for backward compatibility.
+There is no `package.json`, npm install step, frontend compilation, or standalone
+dev server. Run commands from the repository root.
 
 ```bash
-uv venv --python 3.13 .venv
+uv venv --python 3.14 .venv
 uv pip install --python .venv/bin/python -r requirements-test.txt 'defusedxml>=0.7.1'
 ```
 
