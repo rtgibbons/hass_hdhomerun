@@ -2,7 +2,8 @@
 
 from aiohttp.test_utils import TestClient, TestServer
 from homeassistant.components.frontend import DATA_EXTRA_MODULE_URL, UrlManager
-from homeassistant.components.http import HomeAssistantHTTP, KEY_ALLOW_CONFIGURED_CORS
+from homeassistant.components.http import HomeAssistantHTTP
+from homeassistant.components.http.cors import setup_cors
 from homeassistant.core import HomeAssistant
 import pytest
 
@@ -17,7 +18,7 @@ async def test_bundled_dashboard_is_served_without_creating_user_dashboards(tmp_
     hass.data[DATA_EXTRA_MODULE_URL] = UrlManager(lambda *_: None, [])
     hass.http = HomeAssistantHTTP(hass, None, None, None, None, 8123, [], "modern")
     # No authentication middleware is needed to exercise public static assets.
-    hass.http.app[KEY_ALLOW_CONFIGURED_CORS] = lambda resource: None
+    setup_cors(hass.http.app, [])
     await async_setup_frontend(hass)
     urls = hass.data[DATA_EXTRA_MODULE_URL].urls
     assert len(urls) == 1
@@ -57,7 +58,7 @@ async def test_card_update_changes_module_tree_url(tmp_path, monkeypatch):
         hass.config.components.add("frontend")
         hass.data[DATA_EXTRA_MODULE_URL] = UrlManager(lambda *_: None, [])
         hass.http = HomeAssistantHTTP(hass, None, None, None, None, 8123, [], "modern")
-        hass.http.app[KEY_ALLOW_CONFIGURED_CORS] = lambda resource: None
+        setup_cors(hass.http.app, [])
         await async_setup_frontend(hass)
         url = next(iter(hass.data[DATA_EXTRA_MODULE_URL].urls))
         urls.append(url)

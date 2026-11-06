@@ -6,8 +6,6 @@ from types import SimpleNamespace
 
 import pytest
 from homeassistant.components.sensor import SensorEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import EntityPlatform
 
 from custom_components.hdhomerun.const import (
@@ -67,10 +65,8 @@ def test_device_sensor_exposes_extra_attributes():
 
 
 @pytest.mark.asyncio
-async def test_epg_freshness_timestamps_follow_cached_snapshot(tmp_path):
-    hass = HomeAssistant(str(tmp_path))
-    await er.async_load(hass)
-    entry = SimpleNamespace(unique_id="1234ABCD", entry_id="entry", options={})
+async def test_epg_freshness_timestamps_follow_cached_snapshot(hass, config_entry):
+    entry = config_entry
     proxy = EPGProxy(hass, entry.entry_id, "192.0.2.1", 6)
     coordinator = SimpleNamespace(data=SimpleNamespace(
         discovery_method=DiscoverMode.HTTP, tuner_status=[],
@@ -94,6 +90,7 @@ async def test_epg_freshness_timestamps_follow_cached_snapshot(tmp_path):
         platform_name=DOMAIN, platform=None, scan_interval=timedelta(seconds=30),
         entity_namespace=None,
     )
+    platform.config_entry = entry
     platform.async_prepare()
     try:
         await platform.async_add_entities(diagnostics)
@@ -132,4 +129,3 @@ async def test_epg_freshness_timestamps_follow_cached_snapshot(tmp_path):
         assert hass.states.get(last_failure.entity_id).state == "2026-10-25T15:45:00+00:00"
     finally:
         await platform.async_reset()
-        await hass.async_stop()
