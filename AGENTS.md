@@ -22,7 +22,7 @@ JavaScript dashboard components. Preserve attribution to uvjim and contributors.
 
 ## Local setup
 
-Use Python 3.14 for HA 2026.11 beta compatibility, and Node 24 or 26 for dashboard
+Use Python 3.14 for HA 2026.11.0 compatibility, and Node 24 or 26 for dashboard
 tests. CI also tests Python 3.13 with HA 2026.2.3 for backward compatibility.
 There is no `package.json`, npm install step, frontend compilation, or standalone
 dev server. Run commands from the repository root.
@@ -109,13 +109,17 @@ do not infer a license from HA, HACS, or another repository by the same author.
 ## CI and release gates
 
 `validate.yml` runs Python tests/Ruff, dashboard tests, and Hassfest.
-`hacs.yml` independently runs full HACS eligibility without ignored checks.
-Both run automatically on pushes to and PRs targeting `main` or `develop`, plus
-daily schedules. Use automatic runs; do not manually dispatch duplicates.
+`hacs.yml` defines independent HACS eligibility without ignored checks, but the
+workflow is currently `disabled_manually` at the owner's explicit request.
+Do not re-enable it without authorization or describe it as passing eligibility.
+Validate runs automatically on pushes to and PRs targeting `main` or `develop`,
+plus daily schedules. Use automatic runs; do not manually dispatch duplicates.
 
-After an authorized push or PR update, inspect both workflows for the exact
-head SHA. Subscribe to their results separately and to PR comments/reviews when
-supported. Missing, skipped, cancelled, or older-head runs are not passing CI.
+After an authorized push or PR update, inspect Validate for the exact head SHA
+and record HACS eligibility as disabled, not passing. If eligibility is later
+authorized and enabled, inspect and subscribe to both workflows separately.
+Subscribe to PR comments/reviews when supported.
+Missing, skipped, cancelled, or older-head runs are not passing CI.
 Before an authorized merge, check all current PR checks, not just the Validate
 badge. That badge reports code validation; **HACS: Custom** is an installation
 channel label, not eligibility certification.
@@ -127,9 +131,11 @@ The ZIP contains runtime files at its root and the root license if present.
 Release bodies use curated notes, not generated commit titles.
 Finalize candidate wording and release-page links before tagging.
 
-Inherited-code licensing remains unresolved; do not add a blanket license or
-ignore that HACS failure. The owner has chosen versioned custom-install releases
-independently of HACS default-list eligibility; this does not resolve licensing.
+The root Apache-2.0 LICENSE was inherited from upstream commit `c921b78`.
+Preserve it and upstream attribution; do not claim it establishes blanket
+historical permissions or settles all vendored-code provenance questions.
+The owner has chosen versioned custom-install releases independently of HACS
+default-list eligibility; the new license does not certify eligibility.
 Release preparation is not authorization to tag,
 publish, submit to HACS, or deploy. The workflow creates drafts only; publication
 requires separate authorization. See `docs/releasing.md` for provenance,

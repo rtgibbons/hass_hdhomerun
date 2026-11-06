@@ -1,6 +1,6 @@
 # Match the development toolchain in .agents/setup.
 homeassistant==2026.2.3; python_version < '3.14'
-homeassistant==2026.11.0b1; python_version >= '3.14'
+homeassistant==2026.11.0; python_version >= '3.14'
 pytest==9.1.1
 pytest-asyncio==1.4.0
 ruff==0.16.10
