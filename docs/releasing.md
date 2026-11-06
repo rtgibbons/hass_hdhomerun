@@ -7,7 +7,8 @@ A draft GitHub release does not satisfy the default-listing release requirement.
 
 ## Release policy
 
-**2026.10.1 is the first fork release for custom installation.** The latest upstream
+**2026.10.1 was the first published fork release for custom installation.**
+The current release candidate is **2026.11.1**. The latest upstream
 release verified on October 25, 2026 was
 [2026.9.1](https://github.com/uvjim/hass_hdhomerun/releases/tag/2026.9.1).
 The fork follows upstream's `year.month.revision` versioning, with its own
@@ -16,11 +17,14 @@ the same version does not conflict with this fork's release. Optional beta tags
 use `year.month.revisionbN`, such as `2026.10.1b1`, and must exactly match the
 source manifest. Keep future fork versions increasing.
 
-The owner has chosen versioned custom-install snapshots while licensing remains
-unresolved. Code validation gates packaging; HACS default-list eligibility is
-checked independently and is not a custom-release gate. This is not a license
-grant or a claim that permissions have been resolved. See the
-[release notes](releases/2026.10.1.md).
+The owner has chosen versioned custom-install snapshots. Code validation gates
+packaging; HACS default-list eligibility is not a custom-release gate.
+The HACS eligibility workflow is currently `disabled_manually` at the owner's
+explicit request; do not re-enable it without authorization or claim eligibility.
+The inherited Apache-2.0 license does not itself establish default-list readiness
+or settle every provenance question. See the
+[current release notes](releases/2026.11.1.md) and the unchanged
+[historical 2026.10.1 notes](releases/2026.10.1.md).
 
 ## Release review and default-list requirements
 
@@ -41,8 +45,16 @@ grant or a claim that permissions have been resolved. See the
 
 ### Licensing status
 
-As of October 25, 2026, no explicit license grant has been found for the
-inherited integration in `uvjim/hass_hdhomerun`. Review of its 274 reachable
+The current tree includes the Apache-2.0
+[LICENSE](https://github.com/rtgibbons/hass_hdhomerun/blob/2026.11.1/LICENSE)
+inherited from upstream
+[commit c921b78](https://github.com/uvjim/hass_hdhomerun/commit/c921b78d147bb8ddace0f0754be4c44d89a5a8b3).
+Preserve that license and upstream attribution in source and release packaging.
+This is new upstream licensing evidence, not a blanket finding about historical
+permissions, every contributor's authority, or all vendored-code provenance.
+
+Historically, the October 25, 2026 review had found no explicit license grant
+for the inherited integration in `uvjim/hass_hdhomerun`. Review of its 274 reachable
 commits, current branches/tags, issue/PR descriptions, and 152 issue/PR comments
 did not establish permission to release the inherited code under an open-source
 license. Neither did review of all 40 public release descriptions and eight
@@ -70,11 +82,11 @@ There is no automatic Home Assistant or HACS fallback license:
   inherit a repository license when a license notice exists; these terms do not
   supply a missing open-source license.
 
-For resolution, obtain a written grant covering the inherited code and relevant
-contributions, and check vendored code separately. Apache-2.0 is a reasonable
-license to request, not one this fork can assign to others' code without
-authorization. Attribution and an unanswered permission request do not resolve
-the licensing question or the default-list blocker.
+Check vendored code and relevant contribution provenance separately, preserving
+applicable notices and seeking clarification from rights holders where needed.
+The upstream license supersedes the earlier categorical absence-of-license
+assessment for the current tree; it does not justify assigning new terms to
+third-party code without authority. No default HACS eligibility result is claimed.
 
 ## Repository metadata
 
@@ -114,17 +126,18 @@ fork changes to `main`. Do not reset either fork branch to upstream.
 
 ## Validate the exact release candidate
 
-1. Prepare `2026.10.1` in `custom_components/hdhomerun/manifest.json` in source.
+1. Prepare `2026.11.1` in `custom_components/hdhomerun/manifest.json` in source.
    For later releases, choose the next calendar version. The version must be
-   committed on `main` before any matching tag is authorized. Do not retain an
-   upstream version for the fork's first release.
+   committed on `main` before any matching tag is authorized.
 2. Run Python tests, Ruff, dashboard tests, Markdown lint, workflow lint,
    Hassfest, and a fresh secret scan. Validate packaged frontend assets and
    translations, not only Python files.
-3. Push the candidate branch and verify the automatic `validate.yml` and
-   `hacs.yml` runs, following the repository's `AGENTS.md` instructions.
+3. After an authorized candidate push, verify the automatic `validate.yml` runs,
+   following the repository's `AGENTS.md` instructions. Record `hacs.yml` as
+   manually disabled; do not enable it as part of release preparation.
 4. Verify successful **Tests and Ruff**, dashboard tests, and **Hassfest** in
-   **Validate** for the exact candidate commit. Inspect **HACS eligibility**
+   **Validate** for the exact candidate commit. Disabled **HACS eligibility**
+   is not a passing result. If later authorized and enabled, inspect its result
    separately and report failures without ignores. It must pass before default
    HACS submission, but does not gate custom releases. Local checks do not
    replace these GitHub results.
@@ -137,7 +150,8 @@ both `main` and `develop`, supports manual dispatch, and is reusable by the
 release workflow. Use automatic runs and verify the exact head SHA as required
 by `AGENTS.md`; do not dispatch duplicate runs after each push.
 
-**HACS eligibility** has the same triggers and is separately reusable. Its
+**HACS eligibility** defines the same triggers and is separately reusable, but
+those definitions do not override its manually disabled repository state. Its
 listing-readiness result does not affect the Validate badge. The static
 **HACS: Custom** badge describes installation, not a passing eligibility check.
 

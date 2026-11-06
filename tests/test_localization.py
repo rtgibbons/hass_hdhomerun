@@ -4,14 +4,13 @@ import json
 import logging
 from datetime import timedelta
 from pathlib import Path
-from types import MappingProxyType, SimpleNamespace
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
 from homeassistant.components.button import ButtonEntityDescription
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntityDescription
-from homeassistant.config_entries import ConfigEntries, ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.const import MAJOR_VERSION, MINOR_VERSION
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
@@ -48,22 +47,11 @@ def translations(language):
     ("en", "Favorite Channels", "Program"),
     ("en-GB", "Favourite Channels", "Programme"),
 ])
-async def test_localized_names_keep_legacy_ids_and_user_names(tmp_path, monkeypatch, language, favourite, programme):
+async def test_localized_names_keep_legacy_ids_and_user_names(hass, config_entry, language, favourite, programme):
     """Local spelling must not change old or newly generated entity IDs."""
-    hass = HomeAssistant(str(tmp_path))
     hass.config.language = language
-    hass.config_entries = ConfigEntries(hass, {})
-    # Do not invoke discovery/network setup; platform registration remains real.
-    monkeypatch.setattr(hass.config_entries, "async_setup", AsyncMock(return_value=True))
-    await er.async_load(hass)
-    await dr.async_load(hass)
     registry = er.async_get(hass)
-    entry = ConfigEntry(
-        domain=DOMAIN, unique_id="1234ABCD", options={}, data={}, title="My HDHomeRun",
-        version=1, minor_version=1, source="user", discovery_keys=MappingProxyType({}),
-        subentries_data=[],
-    )
-    await hass.config_entries.async_add(entry)
+    entry = config_entry
     coordinator = DataUpdateCoordinator(hass, logging.getLogger(__name__), name="offline", config_entry=entry)
     coordinator.async_set_updated_data(SimpleNamespace(
         tuner_status=[{"Resource": "tuner0"}], channels=[], model="HDHR",
@@ -114,12 +102,23 @@ async def test_localized_names_keep_legacy_ids_and_user_names(tmp_path, monkeypa
         ]
         assert hass.states.get("sensor.tuner0_programme").attributes["friendly_name"] == f"Tuner0 {programme}"
         assert hass.states.get("sensor.tuner0").attributes["friendly_name"] == "Tuner0"
-        assert hass.states.get("sensor.living_room_rf").attributes["friendly_name"] == "My aerial"
-        tuner_device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, "1234ABCD_Tuner0")})
+        # HA 2026.11 composes device context even for user-named entities.
+        contextual_names = (MAJOR_VERSION, MINOR_VERSION) >= (2026, 11)
+        assert registry.async_get("sensor.living_room_rf").name == "My aerial"
+        assert hass.states.get("sensor.living_room_rf").attributes["friendly_name"] == (
+            "Tuner0 My aerial" if contextual_names else "My aerial"
+        )
+        tuner_device = next(
+            device for device in dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id)
+            if (DOMAIN, "1234ABCD_Tuner0") in device.identifiers
+        )
         dr.async_get(hass).async_update_device(tuner_device.id, name_by_user="Roof tuner")
         await hass.async_block_till_done()
         assert hass.states.get("sensor.tuner0_programme").attributes["friendly_name"] == f"Roof tuner {programme}"
-        assert hass.states.get("sensor.living_room_rf").attributes["friendly_name"] == "My aerial"
+        assert registry.async_get("sensor.living_room_rf").name == "My aerial"
+        assert hass.states.get("sensor.living_room_rf").attributes["friendly_name"] == (
+            "Roof tuner My aerial" if contextual_names else "My aerial"
+        )
         new_sensor = HDHomerunTunerSensor(
             config_entry=entry, coordinator=coordinator, device_name="Tuner0",
             description=SensorEntityDescription(key="SignalQualityPercent", name="Tuner0 Signal Quality", translation_key="tuner_signal_quality"),
@@ -129,7 +128,6 @@ async def test_localized_names_keep_legacy_ids_and_user_names(tmp_path, monkeypa
         assert hass.states.get(new_sensor.entity_id).attributes["friendly_name"] == "Roof tuner Signal Quality"
     finally:
         await platform.async_reset()
-        await hass.async_stop()
 
 
 def test_epg_status_is_translatable_enum():
@@ -172,10 +170,8 @@ async def test_refresh_errors_have_native_translations(kind):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("legacy_firmware", [False, True])
-async def test_every_native_entity_has_both_english_translations(tmp_path, monkeypatch, legacy_firmware):
+async def test_every_native_entity_has_both_english_translations(hass, monkeypatch, legacy_firmware):
     """Actual platform factories must wire every display name to a translated key."""
-    hass = HomeAssistant(str(tmp_path))
-    await er.async_load(hass)
     entry = SimpleNamespace(unique_id="1234ABCD", entry_id="entry", options={})
     coordinator = SimpleNamespace(data=SimpleNamespace(
         discovery_method=DiscoverMode.HTTP, tuner_status=[{"Resource": "tuner0"}],
@@ -189,25 +185,22 @@ async def test_every_native_entity_has_both_english_translations(tmp_path, monke
     if legacy_firmware:
         monkeypatch.setattr(sensor, "UPDATE_DOMAIN", None)
         monkeypatch.setattr(binary_sensor, "UPDATE_DOMAIN", None)
-    try:
-        for module, domain in ((sensor, "sensor"), (binary_sensor, "binary_sensor"),
-                               (button, "button"), (select, "select"), (update, "update")):
-            entities = []
+    for module, domain in ((sensor, "sensor"), (binary_sensor, "binary_sensor"),
+                           (button, "button"), (select, "select"), (update, "update")):
+        entities = []
 
-            def collect(new_entities, **kwargs):
-                entities.extend(new_entities)
+        def collect(new_entities, **kwargs):
+            entities.extend(new_entities)
 
-            await module.async_setup_entry(hass, entry, collect)
-            assert entities
-            for entity in entities:
-                assert entity.has_entity_name
-                assert entity.translation_key
-                for language in ("en", "en-GB"):
-                    data = json.loads((TRANSLATIONS / f"{language}.json").read_text())
-                    translated = data["entity"][domain][entity.translation_key]
-                    if entity.translation_key == "tuner_status":
-                        assert set(translated["state"]) == {"idle", "in_use", "scanning"}
-                    else:
-                        assert translated["name"]
-    finally:
-        await hass.async_stop()
+        await module.async_setup_entry(hass, entry, collect)
+        assert entities
+        for entity in entities:
+            assert entity.has_entity_name
+            assert entity.translation_key
+            for language in ("en", "en-GB"):
+                data = json.loads((TRANSLATIONS / f"{language}.json").read_text())
+                translated = data["entity"][domain][entity.translation_key]
+                if entity.translation_key == "tuner_status":
+                    assert set(translated["state"]) == {"idle", "in_use", "scanning"}
+                else:
+                    assert translated["name"]

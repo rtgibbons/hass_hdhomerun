@@ -22,17 +22,16 @@ from custom_components.hdhomerun.pyhdhr.const import DiscoverMode
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("kind", ["epg", "lineup"])
-async def test_automatic_refresh_updates_button_timestamp(tmp_path, kind):
-    hass = HomeAssistant(str(tmp_path))
-    await er.async_load(hass)
+async def test_automatic_refresh_updates_button_timestamp(hass, config_entry, kind):
     await button.async_setup(hass, {})
     platform = EntityPlatform(
         hass=hass, logger=logging.getLogger(__name__), domain="button",
         platform_name=DOMAIN, platform=None, scan_interval=timedelta(seconds=30),
         entity_namespace=None,
     )
+    platform.config_entry = config_entry
     platform.async_prepare()
-    entry = SimpleNamespace(unique_id="1234ABCD", options={})
+    entry = config_entry
     refreshed = []
 
     async def fetch():
@@ -46,7 +45,7 @@ async def test_automatic_refresh_updates_button_timestamp(tmp_path, kind):
         model="HDHR", name="Test tuner", installed_version="20260101",
     )
     coordinator = DataUpdateCoordinator(
-        hass, logging.getLogger(__name__), name="test", config_entry=None
+        hass, logging.getLogger(__name__), name="test", config_entry=entry
     )
     coordinator.async_set_updated_data(device)
     proxy = epg.EPGProxy(hass, "entry", "192.0.2.1", 6)
@@ -78,7 +77,6 @@ async def test_automatic_refresh_updates_button_timestamp(tmp_path, kind):
         assert len(refreshed) == 3
     finally:
         await platform.async_reset()
-        await hass.async_stop()
 
 
 @pytest.mark.asyncio
